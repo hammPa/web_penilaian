@@ -37,6 +37,7 @@ export default function AssessmentResult() {
   const [variables, setVariables] = useState([]);
   const [criteria, setCriteria] = useState([]);
   const [tables, setTables] = useState([]);
+  const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -74,17 +75,14 @@ export default function AssessmentResult() {
   const criteriaMap = {};
   criteria.forEach(c => { criteriaMap[c.id] = c; });
 
-  // Map selections untuk akses cepat
   const selectionMap = {};
   assessment.selections.forEach(s => {
     selectionMap[s.variableId] = s.selectedLevel;
   });
 
   const { total, percentage } = assessment.results;
-  // maxTotal diturunkan dari percentage = total / maxTotal * 100
   const maxTotal = percentage > 0 ? Math.round(total / (percentage / 100)) : 0;
 
-  // Kelompokkan kriteria (yang muncul di hasil) berdasarkan tabelnya
   const subtotalCriteriaIds = Object.keys(assessment.results.subtotals);
   const groupedTables = tables
     .map(t => ({
@@ -93,7 +91,6 @@ export default function AssessmentResult() {
     }))
     .filter(g => g.criteriaIds.length > 0);
 
-  // Kriteria yang tidak terkait tabel manapun (fallback, mis. tabel sudah dihapus)
   const orphanCriteriaIds = subtotalCriteriaIds.filter(
     cid => !criteriaMap[cid] || !tables.some(t => t.id === criteriaMap[cid].tableId)
   );
@@ -102,44 +99,64 @@ export default function AssessmentResult() {
     const subtotal = assessment.results.subtotals[criteriaId];
     const crit = criteriaMap[criteriaId] || { name: criteriaId };
     const varIds = variables.filter(v => v.criteriaId === criteriaId).map(v => v.id);
+
     return (
       <Card key={criteriaId}>
-        <div className="mb-1">
-          <h3 className="font-serif text-lg font-semibold text-[#17203A]">{crit.name}</h3>
+        {/* Header: judul bisa wrap, subtotal tetap di kanan atas */}
+        <div className="flex items-start justify-between gap-3 mb-1 flex-wrap">
+          <h3 className="font-serif text-lg font-semibold text-[#17203A] break-words flex-1 min-w-0">
+            {crit.name}
+          </h3>
+          <span className="text-sm text-slate-500 whitespace-nowrap flex-shrink-0">
+            Subtotal <span className="font-semibold text-[#17203A]">{subtotal}</span>
+          </span>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
-          Subtotal <span className="font-semibold text-[#17203A]">{subtotal}</span>
-        </p>
-        <div className="divide-y divide-slate-100 border-t border-slate-100">
-          {varIds.map(vid => {
-            const variable = variableMap[vid];
-            const score = assessment.results.variableScores[vid] || 0;
-            const selectedLevel = selectionMap[vid];
-            const levelList = variable?.variables || variable?.levels;
-            const levelDescription = selectedLevel !== undefined
-              ? (levelList?.[selectedLevel]?.description || null)
-              : null;
 
-            return (
-              <div key={vid} className="flex items-center justify-between py-2.5 text-sm">
-                <div className="flex-1">
-                  <span className="text-slate-700">{variable?.name || vid}</span>
-                  {selectedLevel !== undefined ? (
-                    <span className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[#0F9D6D]/10 text-[#0F9D6D]">
-                      Level {selectedLevel}
-                      {levelDescription && `: ${levelDescription}`}
-                    </span>
-                  ) : (
-                    <span className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[#C1443A]/10 text-[#C1443A]">
-                      Tidak dipilih
-                    </span>
-                  )}
+        {showDetail ? (
+          <div className="divide-y divide-slate-100 border-t border-slate-100 mt-3">
+            {varIds.map(vid => {
+              const variable = variableMap[vid];
+              const score = assessment.results.variableScores[vid] || 0;
+              const selectedLevel = selectionMap[vid];
+              const levelList = variable?.variables || variable?.levels;
+              const levelDescription = selectedLevel !== undefined
+                ? (levelList?.[selectedLevel]?.description || null)
+                : null;
+
+              return (
+                <div key={vid} className="flex items-start justify-between py-2.5 text-sm">
+                  <div className="flex-1 min-w-0 mr-2">
+                    {/* Nama variabel di baris pertama */}
+                    <div className="text-slate-700 font-medium">{variable?.name || vid}</div>
+                    {/* Badge level di baris kedua (bawah) */}
+                    {selectedLevel !== undefined ? (
+                      <div className="mt-1">
+                        <span className="inline-flex items-center gap-1 rounded-xl px-4 py-2 text-xs font-medium bg-[#0F9D6D]/10 text-[#0F9D6D]">
+                          Level {selectedLevel}
+                          {levelDescription && `: ${levelDescription}`}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        <span className="inline-flex items-center gap-1 rounded-xl px-4 py-2 text-xs font-medium bg-[#C1443A]/10 text-[#C1443A]">
+                          Tidak dipilih
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Skor tetap di kanan, sejajar dengan baris pertama */}
+                  <span className="text-slate-400 tabular-nums flex-shrink-0 mt-0.5">{score}</span>
                 </div>
-                <span className="text-slate-400 tabular-nums ml-4">{score}</span>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          varIds.length > 0 && (
+            <p className="text-xs text-slate-400 mt-2">
+              Klik tombol "Lihat Detail" untuk melihat rincian variabel
+            </p>
+          )
+        )}
       </Card>
     );
   };
@@ -181,6 +198,17 @@ export default function AssessmentResult() {
         </div>
       </div>
 
+      {/* Tombol toggle detail */}
+      <div className="mb-6 flex justify-center">
+        <button
+          onClick={() => setShowDetail(!showDetail)}
+          className="inline-flex items-center gap-2 rounded-full border border-[#17203A] bg-white px-6 py-2.5 text-sm font-medium text-[#17203A] hover:bg-[#17203A] hover:text-white transition-colors shadow-sm"
+        >
+          {showDetail ? 'Sembunyikan Detail' : 'Lihat Detail'}
+        </button>
+      </div>
+
+      {/* Daftar tabel dan kriteria */}
       <div className="space-y-8">
         {groupedTables.map(({ table, criteriaIds }) => (
           <div key={table.id}>
