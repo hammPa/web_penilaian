@@ -3,6 +3,7 @@ import { useToast } from '../../../hooks/useToast';
 import { Link } from 'react-router-dom';
 import CriteriaRow from "./CriteriaRow"; // Pastikan import mengarah ke file yang baru
 import criteriaService from '../../../services/criteriaService';
+import { getKriteriaNilai } from './scoreUtils';
 import { Pencil, Trash, ArrowRight, Plus, Check, X } from 'lucide-react';
 
 const LEVELS = [0, 1, 2, 3, 4, 5];
@@ -12,6 +13,12 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
   const [newRow, setNewRow] = useState({ name: '', description: '' });
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
+
+  // Total Nilai = jumlah nilai (bobot x level tertinggi terisi) semua kriteria
+  const totalNilai = criteriaList.reduce((sum, c) => {
+    const config = variablesByCriteria[c.id]?.[0];
+    return sum + getKriteriaNilai(config);
+  }, 0);
 
   const startAddRow = () => {
     setNewRow({ name: '', description: '' });
@@ -89,6 +96,18 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                 >
                   NILAI {table.name?.toUpperCase()}
                 </th>
+                <th
+                  rowSpan={2}
+                  className="border border-slate-300 bg-slate-100 px-3 py-2 text-center font-bold text-slate-600 w-20 align-middle"
+                >
+                  NILAI
+                </th>
+                <th
+                  rowSpan={2}
+                  className="border border-slate-300 bg-[#17203A] px-3 py-2 text-center font-bold text-white w-28 align-middle"
+                >
+                  TOTAL NILAI
+                </th>
               </tr>
               <tr>
                 {LEVELS.map((lvl) => (
@@ -101,22 +120,28 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                 ))}
               </tr>
             </thead>
-            
+
             {/* DATA BARIS DIMASUKKAN KE SINI */}
             <tbody>
               {criteriaList.length === 0 && !addingRow ? (
                 <tr>
-                  <td colSpan={LEVELS.length + 1} className="border border-slate-300 px-3 py-6 text-center text-sm text-slate-400">
+                  <td colSpan={LEVELS.length + 3} className="border border-slate-300 px-3 py-6 text-center text-sm text-slate-400">
                     Belum ada kriteria pada tabel ini
                   </td>
                 </tr>
               ) : (
-                criteriaList.map((criteria) => (
+                criteriaList.map((criteria, idx) => (
                   <CriteriaRow
                     key={criteria.id}
                     tableId={table.id}
                     criteria={criteria}
                     variables={variablesByCriteria[criteria.id] || []}
+                    onVariableChanged={onCriteriaChanged}
+                    totalCell={
+                      idx === 0
+                        ? { value: totalNilai, rowSpan: criteriaList.length }
+                        : undefined
+                    }
                   />
                 ))
               )}
@@ -124,7 +149,7 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
               {/* FORM TAMBAH KRITERIA */}
               {addingRow && (
                 <tr>
-                  <td colSpan={LEVELS.length + 1} className="border border-slate-300 p-2 bg-[#C8933E]/5">
+                  <td colSpan={LEVELS.length + 3} className="border border-slate-300 p-2 bg-[#C8933E]/5">
                     <div className="flex items-center gap-2">
                       <input
                         autoFocus

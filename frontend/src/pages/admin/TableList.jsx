@@ -18,7 +18,7 @@ export default function TableList() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
+  const [viewMode, setViewMode] = useState('grid'); // 'list' | 'grid'
   const { showToast } = useToast();
 
   const [form, setForm] = useState({ name: '', description: '' });
