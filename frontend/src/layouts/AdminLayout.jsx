@@ -1,10 +1,13 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, LayoutGrid, FileCheck2, LogOut } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, FileCheck2, LogOut, Users, UsersRound, Layers } from 'lucide-react';
 
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/tables', label: 'Tabel Penilaian', icon: LayoutGrid },
+  { path: '/admin/groups', label: 'Grup', icon: Layers },
+  { path: '/admin/teams', label: 'Tim', icon: UsersRound },
+  { path: '/admin/users', label: 'Pengguna', icon: Users },
   { path: '/admin/assessments', label: 'Penilaian', icon: FileCheck2 },
 ];
 

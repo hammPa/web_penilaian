@@ -10,6 +10,9 @@ import TableList from '../pages/admin/TableList';
 import TableDetail from '../pages/admin/TableDetail';
 import CriteriaVariables from '../pages/admin/CriteriaVariables';
 import AdminAssessments from '../pages/admin/Assessments';
+import UserList from '../pages/admin/UserList';
+import TeamList from '../pages/admin/TeamList';
+import GroupList from '../pages/admin/GroupList';
 
 // User pages
 import UserDashboard from '../pages/user/Dashboard';
@@ -36,6 +39,9 @@ export default function AppRoutes() {
         <Route path="tables/:tableId" element={<TableDetail />} />
         <Route path="tables/:tableId/criteria/:criteriaId" element={<CriteriaVariables />} />
         <Route path="assessments" element={<AdminAssessments />} />
+        <Route path="users" element={<UserList />} />
+        <Route path="teams" element={<TeamList />} />
+        <Route path="groups" element={<GroupList />} />
       </Route>
 
       {/* User routes */}

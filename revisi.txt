@@ -1,0 +1,14 @@
+jadi ada 9 tim, tiap tim terdiri dari 3 orang (nanti bisa berubah di semester selanjutnya, bisa di tambah admin).
+
+tiap orang menilai gruo yang ditentukan setiap semester 2x setahun.
+
+hasil penilaian setiap orang dalam tim terhadap setiap grup di rata ratakan untuk mendapat nilai semester
+
+
+didashboard admin muncul data semua grup setiap semester
+
+didashboard tiap orang dalam tim muncul grup yang bisa mereka nilai tiap semester
+
+
+orang dalam tim -> grup -> semester -> rata rata -> nilai
+
