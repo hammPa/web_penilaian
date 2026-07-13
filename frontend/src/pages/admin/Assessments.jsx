@@ -6,6 +6,7 @@ import Modal from '../../components/Modal';
 import assessmentService from '../../services/assessmentService';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
+import tableService from '../../services/tableService';
 import { useToast } from '../../hooks/useToast';
 import { Eye } from 'lucide-react';
 
@@ -23,23 +24,31 @@ function ScoreBadge({ percentage }) {
   );
 }
 
-function AssessmentDetail({ item, criteriaMap, variableMap }) {
+function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
   if (!item) return null;
   const { subtotals = {}, total, percentage, details = [] } = item.results || {};
 
   // maxTotal diturunkan dari percentage = total / maxTotal * 100
   const maxTotal = percentage > 0 ? Math.round(total / (percentage / 100)) : 0;
 
-  const grouped = useMemo(() => {
-    const g = {};
+  // Kelompokkan jawaban: tabel -> kriteria -> variabel
+  const groupedByTable = useMemo(() => {
+    const byCriteria = {};
     details.forEach((d) => {
       const variable = variableMap[d.variableId];
       const criteriaId = variable?.criteriaId || 'unknown';
-      if (!g[criteriaId]) g[criteriaId] = [];
-      g[criteriaId].push({ ...d, variable });
+      if (!byCriteria[criteriaId]) byCriteria[criteriaId] = [];
+      byCriteria[criteriaId].push({ ...d, variable });
     });
-    return g;
-  }, [details, variableMap]);
+
+    const byTable = {};
+    Object.entries(byCriteria).forEach(([criteriaId, items]) => {
+      const tableId = criteriaMap[criteriaId]?.tableId || 'unknown';
+      if (!byTable[tableId]) byTable[tableId] = {};
+      byTable[tableId][criteriaId] = items;
+    });
+    return byTable;
+  }, [details, variableMap, criteriaMap]);
 
   return (
     <div>
@@ -57,48 +66,57 @@ function AssessmentDetail({ item, criteriaMap, variableMap }) {
         </div>
       </div>
 
-      {Object.keys(grouped).length === 0 ? (
+      {Object.keys(groupedByTable).length === 0 ? (
         <p className="text-sm text-slate-400">Tidak ada rincian jawaban.</p>
       ) : (
-        <div className="space-y-5">
-          {Object.entries(grouped).map(([criteriaId, items]) => (
-            <div key={criteriaId}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#C8933E]">
-                  {criteriaMap[criteriaId]?.name || 'Kriteria tidak diketahui'}
-                </p>
-                <span className="text-xs font-semibold text-slate-500">
-                  Subtotal: {subtotals[criteriaId] ?? '-'}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {items.map((d) => {
-                  const levelDesc = d.variable?.levels?.[d.level]?.description;
-                  return (
-                    <div
-                      key={d.variableId}
-                      className="rounded-lg border border-slate-100 px-4 py-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-medium text-[#17203A]">
-                          {d.variable?.name || 'Variabel tidak diketahui'}
-                        </p>
-                        <span className="shrink-0 font-serif font-semibold text-[#17203A]">
-                          {d.score}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                          Level {d.level}
-                        </span>
-                        {levelDesc && (
-                          <span className="text-xs text-slate-500">{levelDesc}</span>
-                        )}
-                      </div>
+        <div className="space-y-6">
+          {Object.entries(groupedByTable).map(([tableId, criteriaGroups]) => (
+            <div key={tableId}>
+              <p className="text-sm font-serif font-semibold text-[#17203A] mb-3">
+                {tableMap[tableId]?.name || 'Tabel tidak diketahui'}
+              </p>
+              <div className="space-y-5">
+                {Object.entries(criteriaGroups).map(([criteriaId, items]) => (
+                  <div key={criteriaId}>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#C8933E]">
+                        {criteriaMap[criteriaId]?.name || 'Kriteria tidak diketahui'}
+                      </p>
+                      <span className="text-xs font-semibold text-slate-500">
+                        Subtotal: {subtotals[criteriaId] ?? '-'}
+                      </span>
                     </div>
-                  );
-                })}
+
+                    <div className="space-y-2">
+                      {items.map((d) => {
+                        const levelDesc = d.variable?.levels?.[d.level]?.description;
+                        return (
+                          <div
+                            key={d.variableId}
+                            className="rounded-lg border border-slate-100 px-4 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-sm font-medium text-[#17203A]">
+                                {d.variable?.name || 'Variabel tidak diketahui'}
+                              </p>
+                              <span className="shrink-0 font-serif font-semibold text-[#17203A]">
+                                {d.score}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                                Level {d.level}
+                              </span>
+                              {levelDesc && (
+                                <span className="text-xs text-slate-500">{levelDesc}</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -110,6 +128,7 @@ function AssessmentDetail({ item, criteriaMap, variableMap }) {
 
 export default function AdminAssessments() {
   const [assessments, setAssessments] = useState([]);
+  const [tables, setTables] = useState([]);
   const [criteria, setCriteria] = useState([]);
   const [variables, setVariables] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,12 +138,14 @@ export default function AdminAssessments() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [assessmentData, criteriaData, variableData] = await Promise.all([
+        const [assessmentData, tableData, criteriaData, variableData] = await Promise.all([
           assessmentService.getAll(),
+          tableService.getAll(),
           criteriaService.getAll(),
           variableService.getAll(),
         ]);
         setAssessments(assessmentData);
+        setTables(tableData);
         setCriteria(criteriaData);
         setVariables(variableData);
       } catch (err) {
@@ -135,6 +156,12 @@ export default function AdminAssessments() {
     };
     fetch();
   }, []);
+
+  const tableMap = useMemo(() => {
+    const map = {};
+    tables.forEach((t) => { map[t.id] = t; });
+    return map;
+  }, [tables]);
 
   const criteriaMap = useMemo(() => {
     const map = {};
@@ -203,7 +230,7 @@ export default function AdminAssessments() {
         onClose={() => setSelected(null)}
         title={`Detail Penilaian${selected ? ' — ' + selected.id.slice(0, 8) : ''}`}
       >
-        <AssessmentDetail item={selected} criteriaMap={criteriaMap} variableMap={variableMap} />
+        <AssessmentDetail item={selected} tableMap={tableMap} criteriaMap={criteriaMap} variableMap={variableMap} />
       </Modal>
     </div>
   );

@@ -6,6 +6,7 @@ import { useToast } from '../../hooks/useToast';
 import assessmentService from '../../services/assessmentService';
 import variableService from '../../services/variableService';
 import criteriaService from '../../services/criteriaService';
+import tableService from '../../services/tableService';
 
 function ScoreDial({ percentage = 0, size = 116 }) {
   const angle = Math.min(100, Math.max(0, percentage)) * 3.6;
@@ -35,18 +36,21 @@ export default function AssessmentResult() {
   const { showToast } = useToast();
   const [variables, setVariables] = useState([]);
   const [criteria, setCriteria] = useState([]);
+  const [tables, setTables] = useState([]);
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [assess, vars, crits] = await Promise.all([
+        const [assess, vars, crits, tbls] = await Promise.all([
           assessmentService.getById(id),
           variableService.getAll(),
-          criteriaService.getAll()
+          criteriaService.getAll(),
+          tableService.getAll()
         ]);
         setAssessment(assess);
         setVariables(vars);
         setCriteria(crits);
+        setTables(tbls);
       } catch (err) {
         showToast('Gagal memuat detail penilaian', 'error');
       } finally {
@@ -79,6 +83,65 @@ export default function AssessmentResult() {
   const { total, percentage } = assessment.results;
   // maxTotal diturunkan dari percentage = total / maxTotal * 100
   const maxTotal = percentage > 0 ? Math.round(total / (percentage / 100)) : 0;
+
+  // Kelompokkan kriteria (yang muncul di hasil) berdasarkan tabelnya
+  const subtotalCriteriaIds = Object.keys(assessment.results.subtotals);
+  const groupedTables = tables
+    .map(t => ({
+      table: t,
+      criteriaIds: subtotalCriteriaIds.filter(cid => criteriaMap[cid]?.tableId === t.id)
+    }))
+    .filter(g => g.criteriaIds.length > 0);
+
+  // Kriteria yang tidak terkait tabel manapun (fallback, mis. tabel sudah dihapus)
+  const orphanCriteriaIds = subtotalCriteriaIds.filter(
+    cid => !criteriaMap[cid] || !tables.some(t => t.id === criteriaMap[cid].tableId)
+  );
+
+  const renderCriteriaCard = (criteriaId) => {
+    const subtotal = assessment.results.subtotals[criteriaId];
+    const crit = criteriaMap[criteriaId] || { name: criteriaId };
+    const varIds = variables.filter(v => v.criteriaId === criteriaId).map(v => v.id);
+    return (
+      <Card key={criteriaId}>
+        <div className="mb-1">
+          <h3 className="font-serif text-lg font-semibold text-[#17203A]">{crit.name}</h3>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">
+          Subtotal <span className="font-semibold text-[#17203A]">{subtotal}</span>
+        </p>
+        <div className="divide-y divide-slate-100 border-t border-slate-100">
+          {varIds.map(vid => {
+            const variable = variableMap[vid];
+            const score = assessment.results.variableScores[vid] || 0;
+            const selectedLevel = selectionMap[vid];
+            const levelDescription = selectedLevel !== undefined && variable?.levels[selectedLevel]?.description
+              ? variable.levels[selectedLevel].description
+              : null;
+
+            return (
+              <div key={vid} className="flex items-center justify-between py-2.5 text-sm">
+                <div className="flex-1">
+                  <span className="text-slate-700">{variable?.name || vid}</span>
+                  {selectedLevel !== undefined ? (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[#0F9D6D]/10 text-[#0F9D6D]">
+                      Level {selectedLevel}
+                      {levelDescription && `: ${levelDescription}`}
+                    </span>
+                  ) : (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[#C1443A]/10 text-[#C1443A]">
+                      Tidak dipilih
+                    </span>
+                  )}
+                </div>
+                <span className="text-slate-400 tabular-nums ml-4">{score}</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-6 p-6 md:-m-8 md:p-8">
@@ -117,50 +180,30 @@ export default function AssessmentResult() {
         </div>
       </div>
 
-      <div className="space-y-5">
-        {Object.entries(assessment.results.subtotals).map(([criteriaId, subtotal]) => {
-          const crit = criteriaMap[criteriaId] || { name: criteriaId };
-          const varIds = variables.filter(v => v.criteriaId === criteriaId).map(v => v.id);
-          return (
-            <Card key={criteriaId}>
-              <div className="mb-1">
-                <h2 className="font-serif text-lg font-semibold text-[#17203A]">{crit.name}</h2>
-              </div>
-              <p className="text-sm text-slate-500 mb-4">
-                Subtotal <span className="font-semibold text-[#17203A]">{subtotal}</span>
-              </p>
-              <div className="divide-y divide-slate-100 border-t border-slate-100">
-                {varIds.map(vid => {
-                  const variable = variableMap[vid];
-                  const score = assessment.results.variableScores[vid] || 0;
-                  const selectedLevel = selectionMap[vid];
-                  const levelDescription = selectedLevel !== undefined && variable?.levels[selectedLevel]?.description
-                    ? variable.levels[selectedLevel].description
-                    : null;
+      <div className="space-y-8">
+        {groupedTables.map(({ table, criteriaIds }) => (
+          <div key={table.id}>
+            <div className="mb-3 flex items-center gap-3">
+              <h2 className="font-serif text-xl font-semibold text-[#17203A]">{table.name}</h2>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+            <div className="space-y-5">
+              {criteriaIds.map(renderCriteriaCard)}
+            </div>
+          </div>
+        ))}
 
-                  return (
-                    <div key={vid} className="flex items-center justify-between py-2.5 text-sm">
-                      <div className="flex-1">
-                        <span className="text-slate-700">{variable?.name || vid}</span>
-                        {selectedLevel !== undefined ? (
-                          <span className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[#0F9D6D]/10 text-[#0F9D6D]">
-                            Level {selectedLevel}
-                            {levelDescription && `: ${levelDescription}`}
-                          </span>
-                        ) : (
-                          <span className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-[#C1443A]/10 text-[#C1443A]">
-                            Tidak dipilih
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-slate-400 tabular-nums ml-4">{score}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          );
-        })}
+        {orphanCriteriaIds.length > 0 && (
+          <div>
+            <div className="mb-3 flex items-center gap-3">
+              <h2 className="font-serif text-xl font-semibold text-[#17203A]">Lainnya</h2>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+            <div className="space-y-5">
+              {orphanCriteriaIds.map(renderCriteriaCard)}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

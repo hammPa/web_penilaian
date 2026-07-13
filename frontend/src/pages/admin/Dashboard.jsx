@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import Card from '../../components/Card';
 import Loading from '../../components/Loading';
+import tableService from '../../services/tableService';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import assessmentService from '../../services/assessmentService';
-import { ClipboardList, FileCheck2, FilePlus2, Wrench } from 'lucide-react';
+import { LayoutGrid, ClipboardList, FileCheck2, FilePlus2, Wrench } from 'lucide-react';
 
 const statConfig = [
+  { key: 'tableCount', label: 'Total Tabel', icon: <LayoutGrid /> },
   { key: 'criteriaCount', label: 'Total Kriteria', icon: <ClipboardList /> },
   { key: 'variableCount', label: 'Total Variabel', icon: <Wrench /> },
   { key: 'assessmentCount', label: 'Total Penilaian', icon: <FileCheck2 /> },
@@ -19,12 +21,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [criteria, variables, assessments] = await Promise.all([
+        const [tables, criteria, variables, assessments] = await Promise.all([
+          tableService.getAll(),
           criteriaService.getAll(),
           variableService.getAll(),
           assessmentService.getAll()
         ]);
         setStats({
+          tableCount: tables.length,
           criteriaCount: criteria.length,
           variableCount: variables.length,
           assessmentCount: assessments.length,
@@ -50,7 +54,7 @@ export default function AdminDashboard() {
         </h1>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         {statConfig.map(({ key, label, icon }) => (
           <Card key={key}>
             <div className="flex items-center gap-4">

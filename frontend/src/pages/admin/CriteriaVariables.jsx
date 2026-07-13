@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import Table from '../../components/Table';
 import Modal from '../../components/Modal';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../hooks/useToast';
-import variableService from '../../services/variableService';
 import criteriaService from '../../services/criteriaService';
-import { Pencil, Trash, Wrench } from 'lucide-react';
+import variableService from '../../services/variableService';
+import { Pencil, Trash, Wrench, ArrowLeft } from 'lucide-react';
 
 const defaultLevels = Array.from({ length: 6 }, () => ({ description: '' }));
 
-export default function VariableList() {
+export default function CriteriaVariables() {
+  const { tableId, criteriaId } = useParams();
+  const [criteria, setCriteria] = useState(null);
   const [variables, setVariables] = useState([]);
-  const [criteria, setCriteria] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -20,7 +22,6 @@ export default function VariableList() {
 
   const [form, setForm] = useState({
     name: '',
-    criteriaId: '',
     weight: '',
     formula: 'bobot * skor',
     description: '',
@@ -29,14 +30,14 @@ export default function VariableList() {
 
   const fetchData = async () => {
     try {
-      const [vars, crits] = await Promise.all([
-        variableService.getAll(),
-        criteriaService.getAll()
+      const [critData, varData] = await Promise.all([
+        criteriaService.getById(criteriaId),
+        variableService.getAll(criteriaId)
       ]);
-      setVariables(vars);
-      setCriteria(crits);
+      setCriteria(critData);
+      setVariables(varData);
     } catch (err) {
-      showToast('Gagal memuat data', 'error');
+      showToast('Gagal memuat data variabel', 'error');
     } finally {
       setLoading(false);
     }
@@ -44,13 +45,12 @@ export default function VariableList() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [criteriaId]);
 
   const openCreate = () => {
     setEditItem(null);
     setForm({
       name: '',
-      criteriaId: criteria[0]?.id || '',
       weight: '',
       formula: 'bobot * skor',
       description: '',
@@ -63,7 +63,6 @@ export default function VariableList() {
     setEditItem(item);
     setForm({
       name: item.name,
-      criteriaId: item.criteriaId,
       weight: item.weight,
       formula: item.formula,
       description: item.description,
@@ -74,8 +73,8 @@ export default function VariableList() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.criteriaId || !form.weight || !form.formula) {
-      showToast('Nama, kriteria, bobot, dan formula wajib diisi', 'error');
+    if (!form.name || !form.weight || !form.formula) {
+      showToast('Nama, bobot, dan formula wajib diisi', 'error');
       return;
     }
     try {
@@ -83,7 +82,7 @@ export default function VariableList() {
         await variableService.update(editItem.id, form);
         showToast('Variabel diperbarui', 'success');
       } else {
-        await variableService.create(form);
+        await variableService.create({ ...form, criteriaId });
         showToast('Variabel ditambahkan', 'success');
       }
       setModalOpen(false);
@@ -104,9 +103,14 @@ export default function VariableList() {
     }
   };
 
-  const getCriteriaName = (id) => criteria.find(c => c.id === id)?.name || '-';
-
   if (loading) return <Loading />;
+  if (!criteria) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-slate-400 text-sm">Kriteria tidak ditemukan</p>
+      </div>
+    );
+  }
 
   const inputClass =
     'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition';
@@ -114,16 +118,24 @@ export default function VariableList() {
 
   return (
     <div>
+      <Link
+        to={`/admin/tables/${tableId}`}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors mb-4"
+      >
+        <ArrowLeft size={16} /> Kembali ke {criteria.name ? 'Daftar Kriteria' : 'Tabel'}
+      </Link>
+
       <div className="flex justify-between items-center mb-8">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Master Data</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Kriteria</p>
           <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
-            Daftar Variabel
+            {criteria.name}
           </h1>
+          <p className="mt-1 text-sm text-slate-500">Daftar variabel di bawah kriteria ini</p>
         </div>
         <button
           onClick={openCreate}
-          className="bg-[#17203A] hover:bg-[#232f52] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+          className="bg-[#17203A] cursor-pointer hover:bg-[#232f52] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
         >
           + Tambah Variabel
         </button>
@@ -134,12 +146,11 @@ export default function VariableList() {
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <Table
-            headers={['Nama', 'Kriteria', 'Bobot', 'Formula', 'Level', 'Aksi']}
+            headers={['Nama', 'Bobot', 'Formula', 'Level', 'Aksi']}
             data={variables}
             renderRow={(item) => (
               <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                 <td className="px-6 py-4 font-medium text-[#17203A]">{item.name}</td>
-                <td className="px-6 py-4 text-slate-600">{getCriteriaName(item.criteriaId)}</td>
                 <td className="px-6 py-4">{item.weight}</td>
                 <td className="px-6 py-4">
                   <code className="bg-[#C8933E]/10 text-[#8a6224] px-2 py-1 rounded text-xs font-mono">
@@ -160,10 +171,10 @@ export default function VariableList() {
                 <td className="px-6 py-4">
                   <div className="flex gap-4 text-sm font-medium">
                     <button onClick={() => openEdit(item)} className="text-[#17203A] hover:text-[#C8933E] transition-colors">
-                      <Pencil /> Edit
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDelete(item.id)} className="text-[#C1443A] hover:text-[#a3372f] transition-colors">
-                      <Trash /> Hapus
+                      <Trash className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -177,27 +188,20 @@ export default function VariableList() {
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto">
           <div>
             <label className={labelClass}>Nama Variabel</label>
-            <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className={inputClass} required />
-          </div>
-          <div>
-            <label className={labelClass}>Kriteria</label>
-            <select value={form.criteriaId} onChange={e => setForm({...form, criteriaId: e.target.value})} className={inputClass} required>
-              <option value="">Pilih Kriteria</option>
-              {criteria.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={inputClass} required />
           </div>
           <div>
             <label className={labelClass}>Bobot</label>
-            <input type="number" step="0.1" value={form.weight} onChange={e => setForm({...form, weight: e.target.value})} className={inputClass} required />
+            <input type="number" step="0.1" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} className={inputClass} required />
           </div>
           <div>
             <label className={labelClass}>Formula</label>
-            <input type="text" value={form.formula} onChange={e => setForm({...form, formula: e.target.value})} className={inputClass} required />
+            <input type="text" value={form.formula} onChange={e => setForm({ ...form, formula: e.target.value })} className={inputClass} required />
             <p className="text-xs text-slate-400 mt-1">Gunakan variabel: bobot, skor (skor = level 0-5)</p>
           </div>
           <div>
             <label className={labelClass}>Deskripsi Variabel</label>
-            <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className={inputClass} rows="2" />
+            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className={inputClass} rows="2" />
           </div>
           <div>
             <label className={labelClass + ' mb-2'}>Deskripsi Level (0-5) — kosongkan jika tidak digunakan</label>
@@ -210,7 +214,7 @@ export default function VariableList() {
                   onChange={e => {
                     const newLevels = [...form.levels];
                     newLevels[idx] = { description: e.target.value };
-                    setForm({...form, levels: newLevels});
+                    setForm({ ...form, levels: newLevels });
                   }}
                   placeholder={`Deskripsi level ${idx}`}
                   className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-sm"

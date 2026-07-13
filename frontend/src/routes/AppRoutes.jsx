@@ -6,8 +6,9 @@ import Login from '../pages/Login';
 
 // Admin pages
 import AdminDashboard from '../pages/admin/Dashboard';
-import CriteriaList from '../pages/admin/CriteriaList';
-import VariableList from '../pages/admin/VariableList';
+import TableList from '../pages/admin/TableList';
+import TableDetail from '../pages/admin/TableDetail';
+import CriteriaVariables from '../pages/admin/CriteriaVariables';
 import AdminAssessments from '../pages/admin/Assessments';
 
 // User pages
@@ -20,7 +21,6 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      
       {/* Admin routes */}
       <Route
         path="/admin"
@@ -32,8 +32,9 @@ export default function AppRoutes() {
       >
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="criteria" element={<CriteriaList />} />
-        <Route path="variables" element={<VariableList />} />
+        <Route path="tables" element={<TableList />} />
+        <Route path="tables/:tableId" element={<TableDetail />} />
+        <Route path="tables/:tableId/criteria/:criteriaId" element={<CriteriaVariables />} />
         <Route path="assessments" element={<AdminAssessments />} />
       </Route>
 

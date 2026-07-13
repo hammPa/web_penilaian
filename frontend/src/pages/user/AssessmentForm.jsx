@@ -4,11 +4,13 @@ import Card from '../../components/Card';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../hooks/useToast';
+import tableService from '../../services/tableService';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import assessmentService from '../../services/assessmentService';
 
 export default function AssessmentForm() {
+  const [tables, setTables] = useState([]);
   const [criteria, setCriteria] = useState([]);
   const [variables, setVariables] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,10 +22,12 @@ export default function AssessmentForm() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [critData, varData] = await Promise.all([
+        const [tableData, critData, varData] = await Promise.all([
+          tableService.getAll(),
           criteriaService.getAll(),
           variableService.getAll()
         ]);
+        setTables(tableData);
         setCriteria(critData);
         setVariables(varData);
         const initial = {};
@@ -69,15 +73,19 @@ export default function AssessmentForm() {
   };
 
   if (loading) return <Loading />;
-  if (criteria.length === 0 || variables.length === 0) {
-    return <EmptyState message="Data kriteria/variabel belum tersedia" />;
+  if (tables.length === 0 || criteria.length === 0 || variables.length === 0) {
+    return <EmptyState message="Data tabel/kriteria/variabel belum tersedia" />;
   }
 
-  const grouped = {};
-  criteria.forEach(c => {
-    grouped[c.id] = {
-      criteria: c,
-      variables: variables.filter(v => v.criteriaId === c.id)
+  // Kelompokkan: tabel -> kriteria -> variabel
+  const groupedTables = tables.map(t => {
+    const tableCriteria = criteria.filter(c => c.tableId === t.id);
+    return {
+      table: t,
+      criteria: tableCriteria.map(c => ({
+        criteria: c,
+        variables: variables.filter(v => v.criteriaId === c.id)
+      }))
     };
   });
 
@@ -117,83 +125,101 @@ export default function AssessmentForm() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="space-y-5">
-          {Object.values(grouped).map(({ criteria: crit, variables: critVars }) => (
-            <Card key={crit.id}>
-              <div className="mb-1">
-                <h2 className="font-serif text-lg font-semibold text-[#17203A]">{crit.name}</h2>
-                {crit.description && (
-                  <p className="text-sm text-slate-500 mt-1">{crit.description}</p>
-                )}
+        <div className="space-y-8">
+          {groupedTables.map(({ table, criteria: tableCriteria }) => (
+            <div key={table.id}>
+              <div className="mb-3 flex items-center gap-3">
+                <h2 className="font-serif text-xl font-semibold text-[#17203A]">{table.name}</h2>
+                <span className="h-px flex-1 bg-slate-200" />
               </div>
+              {table.description && (
+                <p className="text-sm text-slate-500 mb-3 -mt-2">{table.description}</p>
+              )}
 
-              {critVars.length === 0 ? (
-                <p className="text-sm text-slate-400">Tidak ada variabel</p>
-              ) : (
-                <div className="divide-y divide-slate-100 border-t border-slate-100 mt-3">
-                  {critVars.map(variable => {
-                    const availableLevels = getAvailableLevels(variable);
-                    const selectedLevel = selections[variable.id];
-                    return (
-                      <div key={variable.id} className="py-4">
-                        <div className="flex items-baseline justify-between mb-2">
-                          <span className="text-sm font-medium text-slate-700">{variable.name}</span>
-                          <span className="text-xs text-slate-400">Bobot {variable.weight}</span>
-                        </div>
-                        {variable.description && (
-                          <p className="text-xs text-slate-500 mb-3">{variable.description}</p>
-                        )}
-                        {availableLevels.length === 0 ? (
-                          <p className="text-xs text-red-500">Tidak ada level tersedia</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-3">
-                            {availableLevels.map(({ level, description }) => (
-                              <label
-                                key={level}
-                                className={`flex items-start gap-2 cursor-pointer rounded-lg border p-3 flex-1 min-w-[140px] transition-colors ${
-                                  selectedLevel === level
-                                    ? 'border-[#C8933E] bg-[#C8933E]/5'
-                                    : 'border-slate-200 hover:border-slate-300'
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={`var-${variable.id}`}
-                                  value={level}
-                                  checked={selectedLevel === level}
-                                  onChange={() => handleLevelChange(variable.id, level)}
-                                  className="mt-0.5 accent-[#C8933E]"
-                                />
-                                <div>
-                                  <span className="text-sm font-medium">Level {level}</span>
-                                  <p className="text-xs text-slate-600 mt-0.5">{description}</p>
-                                </div>
-                              </label>
-                            ))}
-                            <label
-                              className={`flex items-center gap-2 cursor-pointer rounded-lg border p-3 ${
-                                selectedLevel === null
-                                  ? 'border-[#C8933E] bg-[#C8933E]/5'
-                                  : 'border-slate-200 hover:border-slate-300'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name={`var-${variable.id}`}
-                                checked={selectedLevel === null}
-                                onChange={() => handleLevelChange(variable.id, null)}
-                                className="mt-0.5 accent-[#C8933E]"
-                              />
-                              <span className="text-sm">Tidak ada</span>
-                            </label>
-                          </div>
+              <div className="space-y-5">
+                {tableCriteria.length === 0 ? (
+                  <p className="text-sm text-slate-400">Belum ada kriteria pada tabel ini</p>
+                ) : (
+                  tableCriteria.map(({ criteria: crit, variables: critVars }) => (
+                    <Card key={crit.id}>
+                      <div className="mb-1">
+                        <h3 className="font-serif text-lg font-semibold text-[#17203A]">{crit.name}</h3>
+                        {crit.description && (
+                          <p className="text-sm text-slate-500 mt-1">{crit.description}</p>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
+
+                      {critVars.length === 0 ? (
+                        <p className="text-sm text-slate-400">Tidak ada variabel</p>
+                      ) : (
+                        <div className="divide-y divide-slate-100 border-t border-slate-100 mt-3">
+                          {critVars.map(variable => {
+                            const availableLevels = getAvailableLevels(variable);
+                            const selectedLevel = selections[variable.id];
+                            return (
+                              <div key={variable.id} className="py-4">
+                                <div className="flex items-baseline justify-between mb-2">
+                                  <span className="text-sm font-medium text-slate-700">{variable.name}</span>
+                                  <span className="text-xs text-slate-400">Bobot {variable.weight}</span>
+                                </div>
+                                {variable.description && (
+                                  <p className="text-xs text-slate-500 mb-3">{variable.description}</p>
+                                )}
+                                {availableLevels.length === 0 ? (
+                                  <p className="text-xs text-red-500">Tidak ada level tersedia</p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-3">
+                                    {availableLevels.map(({ level, description }) => (
+                                      <label
+                                        key={level}
+                                        className={`flex items-start gap-2 cursor-pointer rounded-lg border p-3 flex-1 min-w-[140px] transition-colors ${
+                                          selectedLevel === level
+                                            ? 'border-[#C8933E] bg-[#C8933E]/5'
+                                            : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={`var-${variable.id}`}
+                                          value={level}
+                                          checked={selectedLevel === level}
+                                          onChange={() => handleLevelChange(variable.id, level)}
+                                          className="mt-0.5 accent-[#C8933E]"
+                                        />
+                                        <div>
+                                          <span className="text-sm font-medium">Level {level}</span>
+                                          <p className="text-xs text-slate-600 mt-0.5">{description}</p>
+                                        </div>
+                                      </label>
+                                    ))}
+                                    <label
+                                      className={`flex items-center gap-2 cursor-pointer rounded-lg border p-3 ${
+                                        selectedLevel === null
+                                          ? 'border-[#C8933E] bg-[#C8933E]/5'
+                                          : 'border-slate-200 hover:border-slate-300'
+                                      }`}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`var-${variable.id}`}
+                                        checked={selectedLevel === null}
+                                        onChange={() => handleLevelChange(variable.id, null)}
+                                        className="mt-0.5 accent-[#C8933E]"
+                                      />
+                                      <span className="text-sm">Tidak ada</span>
+                                    </label>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
           ))}
         </div>
 

@@ -1,18 +1,26 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, ListChecks, SlidersHorizontal, FileCheck2, LogOut } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, FileCheck2, LogOut } from 'lucide-react';
 
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/admin/criteria', label: 'Kriteria', icon: ListChecks },
-  { path: '/admin/variables', label: 'Variabel', icon: SlidersHorizontal },
+  { path: '/admin/tables', label: 'Tabel Penilaian', icon: LayoutGrid },
   { path: '/admin/assessments', label: 'Penilaian', icon: FileCheck2 },
 ];
 
 export default function AdminLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const activeLabel = navItems.find(i => i.path === location.pathname)?.label || 'Admin';
+  // Aktifkan menu "Tabel Penilaian" juga untuk sub-halaman /admin/tables/...
+  const activeItem = navItems.find(i =>
+    i.path === '/admin/tables'
+      ? location.pathname.startsWith('/admin/tables')
+      : location.pathname === i.path
+  );
+  const activeLabel = activeItem?.label || 'Admin';
+
+  const isActive = (path) =>
+    path === '/admin/tables' ? location.pathname.startsWith('/admin/tables') : location.pathname === path;
 
   return (
     <div className="flex h-screen bg-[#F3F4F7]">
@@ -30,7 +38,7 @@ export default function AdminLayout() {
 
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map(item => {
-            const active = location.pathname === item.path;
+            const active = isActive(item.path);
             const Icon = item.icon;
             return (
               <Link
@@ -97,7 +105,7 @@ export default function AdminLayout() {
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#17203A] border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-stretch justify-around">
           {navItems.map(item => {
-            const active = location.pathname === item.path;
+            const active = isActive(item.path);
             const Icon = item.icon;
             return (
               <Link

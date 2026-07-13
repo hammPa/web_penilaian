@@ -4,7 +4,10 @@ const { success } = require('../utils/responseFormatter');
 class CriteriaController {
   async getAll(req, res, next) {
     try {
-      const data = criteriaService.getAll();
+      const { tableId } = req.query;
+      const data = tableId
+        ? criteriaService.getByTableId(tableId)
+        : criteriaService.getAll();
       success(res, data);
     } catch (err) {
       next(err);
