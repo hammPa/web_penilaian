@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useToast } from '../../../hooks/useToast';
 import { Link } from 'react-router-dom';
-import CriteriaSpreadsheet from "./CriteriaSpreadsheet";
+import CriteriaRow from "./CriteriaRow"; // Pastikan import mengarah ke file yang baru
+import criteriaService from '../../../services/criteriaService';
 import { Pencil, Trash, ArrowRight, Plus, Check, X } from 'lucide-react';
+
+const LEVELS = [0, 1, 2, 3, 4, 5];
 
 export default function GridModeTable({ table, criteriaList, variablesByCriteria, onCriteriaChanged, onEditTable, onDeleteTable }) {
   const [addingRow, setAddingRow] = useState(false);
@@ -36,7 +39,7 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
           <h2 className="font-serif text-lg font-semibold text-[#17203A]">{table.name}</h2>
@@ -68,63 +71,106 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {criteriaList.length === 0 && !addingRow && (
-          <p className="text-sm text-slate-400 px-2">Belum ada kriteria pada tabel ini</p>
-        )}
+      <div className="p-4 space-y-4">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              {/* INI HEADER UTAMA YANG DIPAKAI */}
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="border border-slate-300 bg-[#F7D9B8] px-3 py-2 text-left font-bold text-[#17203A] w-56 align-middle"
+                >
+                  KRITERIA {table.name?.toUpperCase()}
+                </th>
+                <th
+                  colSpan={LEVELS.length}
+                  className="border border-slate-300 bg-[#F7D9B8] px-3 py-1.5 text-center font-bold text-[#17203A]"
+                >
+                  NILAI {table.name?.toUpperCase()}
+                </th>
+              </tr>
+              <tr>
+                {LEVELS.map((lvl) => (
+                  <th
+                    key={lvl}
+                    className="border border-slate-300 bg-slate-100 px-3 py-1.5 text-center font-semibold text-slate-600 w-32"
+                  >
+                    {lvl}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            
+            {/* DATA BARIS DIMASUKKAN KE SINI */}
+            <tbody>
+              {criteriaList.length === 0 && !addingRow ? (
+                <tr>
+                  <td colSpan={LEVELS.length + 1} className="border border-slate-300 px-3 py-6 text-center text-sm text-slate-400">
+                    Belum ada kriteria pada tabel ini
+                  </td>
+                </tr>
+              ) : (
+                criteriaList.map((criteria) => (
+                  <CriteriaRow
+                    key={criteria.id}
+                    tableId={table.id}
+                    criteria={criteria}
+                    variables={variablesByCriteria[criteria.id] || []}
+                  />
+                ))
+              )}
 
-        {criteriaList.map((criteria) => (
-          <CriteriaSpreadsheet
-            key={criteria.id}
-            tableId={table.id}
-            tableName={table.name}
-            criteria={criteria}
-            variables={variablesByCriteria[criteria.id] || []}
-          />
-        ))}
+              {/* FORM TAMBAH KRITERIA */}
+              {addingRow && (
+                <tr>
+                  <td colSpan={LEVELS.length + 1} className="border border-slate-300 p-2 bg-[#C8933E]/5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={newRow.name}
+                        onChange={(e) => setNewRow({ ...newRow, name: e.target.value })}
+                        placeholder="Nama kriteria baru"
+                        className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveRow();
+                          if (e.key === 'Escape') cancelAddRow();
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={newRow.description}
+                        onChange={(e) => setNewRow({ ...newRow, description: e.target.value })}
+                        placeholder="Deskripsi (opsional)"
+                        className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveRow();
+                          if (e.key === 'Escape') cancelAddRow();
+                        }}
+                      />
+                      <button
+                        onClick={saveRow}
+                        disabled={saving}
+                        className="text-[#0F9D6D] hover:text-[#0c7d58] transition-colors disabled:opacity-50"
+                      >
+                        <Check className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={cancelAddRow}
+                        className="text-slate-400 hover:text-[#17203A] transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-        {addingRow ? (
-          <div className="flex items-center gap-2 rounded-lg border border-[#C8933E]/40 bg-[#C8933E]/5 p-3">
-            <input
-              autoFocus
-              type="text"
-              value={newRow.name}
-              onChange={(e) => setNewRow({ ...newRow, name: e.target.value })}
-              placeholder="Nama kriteria baru"
-              className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveRow();
-                if (e.key === 'Escape') cancelAddRow();
-              }}
-            />
-            <input
-              type="text"
-              value={newRow.description}
-              onChange={(e) => setNewRow({ ...newRow, description: e.target.value })}
-              placeholder="Deskripsi (opsional)"
-              className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveRow();
-                if (e.key === 'Escape') cancelAddRow();
-              }}
-            />
-            <button
-              onClick={saveRow}
-              disabled={saving}
-              className="text-[#0F9D6D] hover:text-[#0c7d58] transition-colors disabled:opacity-50"
-              aria-label="Simpan"
-            >
-              <Check className="w-5 h-5" />
-            </button>
-            <button
-              onClick={cancelAddRow}
-              className="text-slate-400 hover:text-[#17203A] transition-colors"
-              aria-label="Batal"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        ) : (
+        {!addingRow && (
           <button
             onClick={startAddRow}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-[#C8933E] hover:text-[#a97a30] transition-colors"

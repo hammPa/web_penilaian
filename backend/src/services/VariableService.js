@@ -13,28 +13,27 @@ class VariableService {
 
   getById(id) {
     const variable = variableRepository.findById(id);
-    if (!variable) throw { status: 404, message: 'Variabel tidak ditemukan' };
+    if (!variable) throw { status: 404, message: 'Data tidak ditemukan' };
     return variable;
   }
 
   create(data) {
-    if (!data.name || !data.criteriaId || !data.weight || !data.formula) {
+    if (!data.name || !data.criteriaId || data.weight === undefined || !data.formula) {
       throw { status: 400, message: 'Nama, kriteria, bobot, dan formula wajib diisi' };
     }
-    if (!Array.isArray(data.levels) || data.levels.length !== 6) {
-      throw { status: 400, message: 'Harus ada 6 level (0-5)' };
+    if (!Array.isArray(data.variables) || data.variables.length !== 6) {
+      throw { status: 400, message: 'Harus ada 6 variabel (0-5)' };
     }
     criteriaRepository.findById(data.criteriaId);
     
     const newVariable = {
       id: uuidv4(),
       criteriaId: data.criteriaId,
-      name: data.name,
+      name: data.name, // Simpan name
       weight: parseFloat(data.weight) || 1,
       formula: data.formula,
-      description: data.description || '',
-      levels: data.levels.map(level => ({
-        description: level.description || ''
+      variables: data.variables.map(v => ({
+        description: v.description || ''
       }))
     };
     return variableRepository.create(newVariable);
@@ -45,18 +44,17 @@ class VariableService {
     if (data.criteriaId) {
       criteriaRepository.findById(data.criteriaId);
     }
-    if (data.levels && (!Array.isArray(data.levels) || data.levels.length !== 6)) {
-      throw { status: 400, message: 'Harus ada 6 level' };
+    if (data.variables && (!Array.isArray(data.variables) || data.variables.length !== 6)) {
+      throw { status: 400, message: 'Harus ada 6 variabel' };
     }
     const updated = {
       criteriaId: data.criteriaId || existing.criteriaId,
-      name: data.name || existing.name,
+      name: data.name || existing.name, // Update name
       weight: data.weight !== undefined ? parseFloat(data.weight) : existing.weight,
       formula: data.formula || existing.formula,
-      description: data.description !== undefined ? data.description : existing.description,
-      levels: data.levels 
-        ? data.levels.map(level => ({ description: level.description || '' }))
-        : existing.levels
+      variables: data.variables 
+        ? data.variables.map(v => ({ description: v.description || '' }))
+        : existing.variables
     };
     return variableRepository.update(id, updated);
   }
@@ -64,7 +62,7 @@ class VariableService {
   delete(id) {
     this.getById(id);
     variableRepository.delete(id);
-    return { message: 'Variabel berhasil dihapus' };
+    return { message: 'Data berhasil dihapus' };
   }
 }
 
