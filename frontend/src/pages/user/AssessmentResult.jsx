@@ -115,8 +115,9 @@ export default function AssessmentResult() {
             const variable = variableMap[vid];
             const score = assessment.results.variableScores[vid] || 0;
             const selectedLevel = selectionMap[vid];
-            const levelDescription = selectedLevel !== undefined && variable?.levels[selectedLevel]?.description
-              ? variable.levels[selectedLevel].description
+            const levelList = variable?.variables || variable?.levels;
+            const levelDescription = selectedLevel !== undefined
+              ? (levelList?.[selectedLevel]?.description || null)
               : null;
 
             return (

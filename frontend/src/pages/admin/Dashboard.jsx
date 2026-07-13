@@ -27,10 +27,27 @@ export default function AdminDashboard() {
           variableService.getAll(),
           assessmentService.getAll()
         ]);
+
+        // Menghitung HANYA variabel level (0-5) yang deskripsinya benar-benar sudah diisi
+        const actualVariableCount = variables.reduce((total, config) => {
+          if (config.variables && typeof config.variables === 'object') {
+            // Ambil semua isi data dari setiap level (0, 1, 2, dst)
+            const levelsData = Object.values(config.variables);
+            
+            // Hitung berapa level yang memiliki deskripsi dan tidak hanya spasi kosong
+            const filledCount = levelsData.filter(
+              (level) => level && level.description && level.description.trim() !== ''
+            ).length;
+
+            return total + filledCount;
+          }
+          return total;
+        }, 0);
+
         setStats({
           tableCount: tables.length,
           criteriaCount: criteria.length,
-          variableCount: variables.length,
+          variableCount: actualVariableCount,
           assessmentCount: assessments.length,
           latestAssessment: assessments[0]
         });

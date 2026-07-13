@@ -61,9 +61,13 @@ class AssessmentService {
       variables.forEach(variable => {
         const bobot = variable.weight;
         // Cari level tertinggi yang memiliki deskripsi (tidak kosong)
-        const availableLevels = variable.levels
-          .map((level, index) => ({ index, desc: level.description }))
-          .filter(item => item.desc && item.desc.trim() !== '');
+        const levelList = variable.variables || variable.levels || [];
+        const availableLevels = levelList
+              .map((level, index) => ({ index, desc: level?.description || '' }))
+              .filter(item => {
+                const desc = item.desc.trim();
+                return desc !== '' && desc !== '-';   // sekaligus filter "-" biar konsisten dgn frontend
+              });
         const maxSkor = availableLevels.length > 0 
           ? Math.max(...availableLevels.map(l => l.index)) 
           : 0; // Jika tidak ada deskripsi sama sekali, dianggap 0

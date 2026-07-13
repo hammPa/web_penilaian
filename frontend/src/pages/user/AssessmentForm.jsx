@@ -9,6 +9,8 @@ import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import assessmentService from '../../services/assessmentService';
 
+const LEVELS = [0, 1, 2, 3, 4, 5];
+
 export default function AssessmentForm() {
   const [tables, setTables] = useState([]);
   const [criteria, setCriteria] = useState([]);
@@ -64,9 +66,19 @@ export default function AssessmentForm() {
     try {
       const result = await assessmentService.create(selectionArray);
       showToast('Penilaian berhasil disimpan', 'success');
-      navigate(`/assessments/${result.id}`);
+
+      // PERBAIKAN: hindari "cannot read properties of undefined (reading 'id')"
+      // jika response API ternyata tidak berbentuk { id: ... } secara langsung
+      const newId = result?.id ?? result?.data?.id ?? result?.data?.data?.id;
+      if (newId) {
+        navigate(`/assessments/${newId}`);
+      } else {
+        // Response tersimpan tapi bentuknya tidak sesuai dugaan, jangan crash.
+        console.warn('assessmentService.create() tidak mengembalikan id yang jelas:', result);
+        navigate('/assessments');
+      }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Gagal menyimpan', 'error');
+      showToast(err.response?.data?.message || err?.message || 'Gagal menyimpan', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -94,11 +106,20 @@ export default function AssessmentForm() {
   const totalCount = variables.length;
   const progressPct = totalCount ? Math.round((answeredCount / totalCount) * 100) : 0;
 
-  // Fungsi untuk mendapatkan level yang tersedia
+  // PERBAIKAN: Fungsi untuk mendapatkan level yang tersedia
   const getAvailableLevels = (variable) => {
-    return variable.levels
-      .map((level, index) => ({ level: index, description: level.description }))
-      .filter(item => item.description !== '');
+    // Ambil object variables, jika undefined beri fallback object kosong
+    const variableData = variable.variables || {};
+
+    // Petakan dari konstanta LEVELS (0-5) untuk menjaga urutan
+    return LEVELS.map((level) => ({
+      level: level,
+      description: variableData[level]?.description || ''
+    })).filter(item => {
+      const desc = item.description.trim();
+      // Sembunyikan yang deskripsinya kosong ATAU hanya berisi "-"
+      return desc !== '' && desc !== '-';
+    });
   };
 
   return (
