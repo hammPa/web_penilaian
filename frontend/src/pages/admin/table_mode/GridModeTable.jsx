@@ -109,6 +109,12 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                   rowSpan={2}
                   className="border border-slate-300 bg-slate-100 px-3 py-2 text-center font-bold text-slate-600 w-20 align-middle"
                 >
+                  BOBOT
+                </th>
+                <th
+                  rowSpan={2}
+                  className="border border-slate-300 bg-slate-100 px-3 py-2 text-center font-bold text-slate-600 w-20 align-middle"
+                >
                   NILAI
                 </th>
                 <th

@@ -9,15 +9,23 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
   const config = variables && variables.length > 0 ? variables[0] : null;
   const nilai = getKriteriaNilai(config);
   const ownLevelCount = config?.variables?.length || 0;
+  
+  const bobot = config?.weight ?? 1;
 
+  // --- STATE UNTUK LEVEL (Sudah ada) ---
   const [editingLevel, setEditingLevel] = useState(null);
   const [draft, setDraft] = useState('');
+  
+  // --- STATE BARU UNTUK BOBOT ---
+  const [isEditingWeight, setIsEditingWeight] = useState(false);
+  const [draftWeight, setDraftWeight] = useState('');
+
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
-  // true saat blur terjadi sebagai efek samping dari paste (textarea di-unmount
-  // otomatis begitu saveLevels() selesai) -> jangan trigger save lagi
+  
   const suppressBlurRef = useRef(false);
 
+  // --- FUNGSI UNTUK EDIT LEVEL (Sudah ada) ---
   const startEdit = (lvl) => {
     if (saving) return;
     suppressBlurRef.current = false;
@@ -31,13 +39,10 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
   };
 
   const saveLevels = async (updates) => {
-    if (saving) return; // cegah request dobel yang tumpang tindih
+    if (saving) return; 
     setSaving(true);
     try {
       if (config) {
-        // Variabel sudah ada -> update deskripsi level yang diedit saja.
-        // Kalau ada index di luar jangkauan array lama (mis. tabel melebar
-        // karena kriteria lain), array-nya diperpanjang dulu.
         const maxIdx = Math.max(...Object.keys(updates).map(Number), config.variables.length - 1);
         const newLevels = Array.from({ length: maxIdx + 1 }, (_, idx) => {
           if (updates[idx] !== undefined) return { description: updates[idx] };
@@ -45,9 +50,6 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
         });
         await variableService.update(config.id, { variables: newLevels });
       } else {
-        // Belum ada variabel untuk kriteria ini -> buat baru, ukuran mengikuti
-        // jumlah kolom yang sedang tampil di tabel (levelIndices), supaya
-        // pas dibuat langsung sejajar dengan kriteria lain di tabel yang sama.
         const size = Math.max(levelIndices?.length || 0, ...Object.keys(updates).map(Number).map(n => n + 1));
         const defaultLevels = Array.from({ length: size }, (_, idx) => ({
           description: updates[idx] !== undefined ? updates[idx] : ''
@@ -55,8 +57,8 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
         await variableService.create({
           name: criteria.name,
           criteriaId: criteria.id,
-          weight: 1,
-          formula: 'bobot * skor',
+          weight: bobot, // Tetap pertahankan bobot lama jika bikin baru
+          formula: 'koefisien * skor',
           variables: defaultLevels
         });
       }
@@ -73,7 +75,6 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
 
   const saveEdit = (lvl) => saveLevels({ [lvl]: draft });
 
-  // Paste beberapa kolom sekaligus (mis. dari Excel/Sheets, dipisah Tab).
   const handlePaste = (e, lvl) => {
     const text = e.clipboardData.getData('text');
     if (!text.includes('\t') && !text.includes('\n')) return;
@@ -90,6 +91,48 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
     }
   };
 
+  // --- FUNGSI BARU UNTUK EDIT BOBOT ---
+  const startEditWeight = () => {
+    if (saving) return;
+    setIsEditingWeight(true);
+    setDraftWeight(bobot);
+  };
+
+  const cancelEditWeight = () => {
+    setIsEditingWeight(false);
+    setDraftWeight('');
+  };
+
+  const saveWeight = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const parsedWeight = parseFloat(draftWeight);
+      const finalWeight = isNaN(parsedWeight) ? 1 : parsedWeight;
+
+      if (config) {
+        await variableService.update(config.id, { weight: finalWeight });
+      } else {
+        const size = levelIndices?.length || 0;
+        const defaultLevels = Array.from({ length: size }, () => ({ description: '' }));
+        await variableService.create({
+          name: criteria.name,
+          criteriaId: criteria.id,
+          weight: finalWeight,
+          formula: 'koefisien * skor',
+          variables: defaultLevels
+        });
+      }
+      showToast('Bobot berhasil disimpan', 'success');
+      setIsEditingWeight(false);
+      onVariableChanged?.();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal menyimpan bobot', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteCriteria = () => {
     if (!window.confirm(`Hapus kriteria "${criteria.name}"? Variabel di dalamnya ikut terhapus.`)) return;
     onDeleteCriteria?.(criteria.id);
@@ -97,7 +140,8 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
 
   return (
     <tr>
-      <td className="border border-slate-300 px-3 py-3 align-top">
+      {/* Kolom 1: Nama Kriteria & Aksi */}
+      <td className="border border-slate-300 px-3 py-3 align-top bg-white">
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col gap-1">
             <span className="font-bold text-[#17203A] uppercase text-xs">{criteria.name}</span>
@@ -117,11 +161,9 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
           </button>
         </div>
       </td>
+
+      {/* Kolom 2: Loop Level Deskripsi */}
       {levelIndices.map((lvl) => {
-        // Kalau variabel ini punya level lebih sedikit dari kolom maksimal
-        // tabel (kriteria lain lebih panjang), sel ekstra tetap bisa diklik
-        // untuk diisi -- begitu disimpan, array levels-nya otomatis
-        // diperpanjang (lihat saveLevels).
         const isEditing = editingLevel === lvl;
         const value = config?.variables?.[lvl]?.description || '';
         const beyondOwnLength = lvl >= ownLevelCount;
@@ -169,13 +211,51 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
           </td>
         );
       })}
-      <td className="border border-slate-300 px-3 py-3 text-center align-top font-semibold text-[#17203A] text-xs">
+
+      {/* Kolom 3: Bobot / Koefisien (Sekarang Bisa Diklik) */}
+      <td 
+        className={`border border-slate-300 px-3 py-3 text-center align-top text-xs transition-colors ${
+          isEditingWeight ? 'bg-[#C8933E]/5' : 'bg-[#C8933E]/10 cursor-pointer hover:bg-[#C8933E]/20'
+        }`}
+        onClick={() => !isEditingWeight && startEditWeight()}
+      >
+        {isEditingWeight ? (
+          <input
+            type="number"
+            step="0.01"
+            autoFocus
+            value={draftWeight}
+            disabled={saving}
+            onChange={(e) => setDraftWeight(e.target.value)}
+            onBlur={saveWeight}
+            onPaste={(e) => e.stopPropagation()} // Memastikan paste disini tidak mengganggu ke sebelahnya
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                saveWeight();
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelEditWeight();
+              }
+            }}
+            className="w-16 text-center text-[11px] font-semibold text-slate-700 border border-[#C8933E] rounded py-1 outline-none appearance-none"
+          />
+        ) : (
+          <span className="font-semibold text-[#8a6224]" title="Klik untuk edit">{bobot}</span>
+        )}
+      </td>
+
+      {/* Kolom 4: Nilai Akhir baris ini */}
+      <td className="border border-slate-300 px-3 py-3 text-center align-top font-bold text-[#17203A] text-xs bg-slate-50">
         {nilai}
       </td>
+
+      {/* Kolom 5: Total (Rowspan) */}
       {totalCell && (
         <td
           rowSpan={totalCell.rowSpan}
-          className="border border-slate-300 px-3 py-3 text-center align-middle bg-[#17203A] text-white font-serif font-semibold text-sm"
+          className="border border-slate-300 px-3 py-3 text-center align-middle bg-[#17203A] text-white font-serif font-bold text-base"
         >
           {totalCell.value}
         </td>

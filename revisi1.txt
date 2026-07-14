@@ -11,7 +11,7 @@ hapus kolom                                                                     
 tambah foto area untuk dokumentasi(*) dipaling bawah fotonya bebas jumlahnya simpan difolder dulu
 
 priority:
-perbaikan hitungan penilaian sesuai excel yg baru, tiap tabel ada faktor pengali koofisien
+perbaikan hitungan penilaian sesuai excel yg baru, tiap tabel ada faktor pengali koofisien  -> tabel 3 baris 3 agak anomali soalnya nilainya setengah dari sblmnnya jadinya dibuat perbaris ada koefisien
 hitungan penilaian satu juri Nor banyak juri di area yg sama
 
 fitur tambahan:
@@ -19,5 +19,5 @@ dashboard
 
 
 
-asssesment bisa banyak
-tanggal tanggal semester
+asssesment bisa banyak                                                          -> 
+tanggal tanggal semester                                                        -> done
