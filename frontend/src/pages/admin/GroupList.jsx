@@ -4,20 +4,27 @@ import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../hooks/useToast';
 import groupService from '../../services/groupService';
+import teamService from '../../services/teamService';
 import { Users, Edit2, Trash2 } from 'lucide-react';
 
 export default function GroupList() {
   const [groups, setGroups] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const { showToast } = useToast();
 
-  const [form, setForm] = useState({ name: '', gugus: '' }); // Tambah gugus
+  const [form, setForm] = useState({ name: '', gugus: '', teamId: '' });
 
   const fetchData = async () => {
     try {
-      setGroups(await groupService.getAll());
+      const [groupsData, teamsData] = await Promise.all([
+        groupService.getAll(),
+        teamService.getAll()
+      ]);
+      setGroups(groupsData);
+      setTeams(teamsData);
     } catch (err) {
       showToast('Gagal memuat data grup', 'error');
     } finally {
@@ -29,13 +36,13 @@ export default function GroupList() {
 
   const openCreate = () => {
     setEditItem(null);
-    setForm({ name: '', gugus: '' });
+    setForm({ name: '', gugus: '', teamId: '' });
     setModalOpen(true);
   };
 
   const openEdit = (item) => {
     setEditItem(item);
-    setForm({ name: item.name, gugus: item.gugus });
+    setForm({ name: item.name, gugus: item.gugus, teamId: item.teamId || '' });
     setModalOpen(true);
   };
 
@@ -43,6 +50,10 @@ export default function GroupList() {
     e.preventDefault();
     if (!form.name || !form.gugus) {
       showToast('Nama dan Gugus wajib diisi', 'error');
+      return;
+    }
+    if (!form.teamId) {
+      showToast('Tim wajib dipilih', 'error');
       return;
     }
     try {
@@ -76,6 +87,8 @@ export default function GroupList() {
   const inputClass = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition';
   const labelClass = 'block text-sm font-medium text-slate-700 mb-1';
 
+  const getTeamName = (teamId) => teams.find(t => t.id === teamId)?.name || '-';
+
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
@@ -97,6 +110,7 @@ export default function GroupList() {
               <tr>
                 <th className="px-6 py-4">Nama Grup</th>
                 <th className="px-6 py-4">Gugus</th>
+                <th className="px-6 py-4">Tim</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
@@ -105,6 +119,15 @@ export default function GroupList() {
                 <tr key={group.id} className="hover:bg-slate-50/50">
                   <td className="px-6 py-4 font-medium">{group.name}</td>
                   <td className="px-6 py-4 text-slate-600">{group.gugus}</td>
+                  <td className="px-6 py-4">
+                    {group.teamId ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#C8933E]/10 text-[#8a6224]">
+                        {getTeamName(group.teamId)}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic text-xs">Belum ada tim</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right flex justify-end gap-2">
                     <button onClick={() => openEdit(group)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg"><Edit2 size={16} /></button>
                     <button onClick={() => handleDelete(group.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
@@ -125,6 +148,23 @@ export default function GroupList() {
           <div>
             <label className={labelClass}>Gugus</label>
             <input type="text" value={form.gugus} onChange={e => setForm({ ...form, gugus: e.target.value })} className={inputClass} placeholder="Misal: Gugus Depan 01" required />
+          </div>
+          <div>
+            <label className={labelClass}>Tim</label>
+            <select
+              value={form.teamId}
+              onChange={e => setForm({ ...form, teamId: e.target.value })}
+              className={inputClass}
+              required
+            >
+              <option value="">-- Pilih Tim --</option>
+              {teams.map(team => (
+                <option key={team.id} value={team.id}>{team.name}</option>
+              ))}
+            </select>
+            {teams.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">Belum ada Tim — buat Tim dulu sebelum menambah Grup.</p>
+            )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50">Batal</button>

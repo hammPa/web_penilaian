@@ -3,7 +3,13 @@ const { success } = require('../utils/responseFormatter');
 
 class GroupController {
   async getAll(req, res, next) {
-    try { success(res, await groupService.getAll()); } catch (err) { next(err); }
+    try {
+      const { teamId } = req.query;
+      const data = teamId
+        ? await groupService.getByTeamId(teamId)
+        : await groupService.getAll();
+      success(res, data);
+    } catch (err) { next(err); }
   }
   async getById(req, res, next) {
     try { success(res, await groupService.getById(req.params.id)); } catch (err) { next(err); }

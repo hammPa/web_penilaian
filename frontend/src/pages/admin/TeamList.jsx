@@ -15,7 +15,7 @@ export default function TeamList() {
   const [editItem, setEditItem] = useState(null);
   const { showToast } = useToast();
 
-  const [form, setForm] = useState({ name: '', groupIds: [] });
+  const [form, setForm] = useState({ name: '' });
 
   const fetchData = async () => {
     try {
@@ -36,26 +36,14 @@ export default function TeamList() {
 
   const openCreate = () => {
     setEditItem(null);
-    setForm({ name: '', groupIds: [] });
+    setForm({ name: '' });
     setModalOpen(true);
   };
 
   const openEdit = (item) => {
     setEditItem(item);
-    setForm({ name: item.name, groupIds: item.groupIds || [] });
+    setForm({ name: item.name });
     setModalOpen(true);
-  };
-
-  const handleGroupToggle = (groupId) => {
-    setForm(prev => {
-      const isSelected = prev.groupIds.includes(groupId);
-      return {
-        ...prev,
-        groupIds: isSelected 
-          ? prev.groupIds.filter(id => id !== groupId)
-          : [...prev.groupIds, groupId]
-      };
-    });
   };
 
   const handleSubmit = async (e) => {
@@ -75,12 +63,16 @@ export default function TeamList() {
       setModalOpen(false);
       fetchData();
     } catch (err) {
-      showToast('Operasi gagal', 'error');
+      showToast(err.response?.data?.message || 'Operasi gagal', 'error');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Yakin hapus tim ini?')) return;
+    const groupCount = groups.filter(g => g.teamId === id).length;
+    const confirmMsg = groupCount > 0
+      ? `Tim ini masih punya ${groupCount} grup terhubung. Grup-grup itu akan jadi "tanpa tim" (bukan ikut terhapus). Lanjutkan hapus tim?`
+      : 'Yakin hapus tim ini?';
+    if (!window.confirm(confirmMsg)) return;
     try {
       await teamService.remove(id);
       showToast('Tim dihapus', 'success');
@@ -95,24 +87,8 @@ export default function TeamList() {
   const inputClass = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition';
   const labelClass = 'block text-sm font-medium text-slate-700 mb-1';
 
-  // ==========================================
-  // LOGIKA BARU: FILTER GRUP YANG SUDAH DIPAKAI
-  // ==========================================
-  
-  // 1. Kumpulkan semua ID Grup yang sudah dipakai oleh Tim LAIN
-  const takenGroupIds = teams.reduce((acc, team) => {
-    // Jika kita sedang Edit Tim, abaikan grup milik tim ini sendiri
-    if (editItem && team.id === editItem.id) {
-      return acc;
-    }
-    // Gabungkan groupIds dari tim lain ke dalam array `acc`
-    return acc.concat(team.groupIds || []);
-  }, []);
-
-  // 2. Filter grup, hanya tampilkan yang belum dipakai tim lain
-  const availableGroups = groups.filter(group => !takenGroupIds.includes(group.id));
-
-  // ==========================================
+  // Grup milik tim sekarang diturunkan dari group.teamId, bukan disimpan di Team
+  const getGroupsForTeam = (teamId) => groups.filter(g => g.teamId === teamId);
 
   return (
     <div>
@@ -139,26 +115,25 @@ export default function TeamList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {teams.map((team) => (
-                <tr key={team.id} className="hover:bg-slate-50/50">
-                  <td className="px-6 py-4 font-medium text-slate-800">{team.name}</td>
-                  
-                  <td className="px-6 py-4 text-slate-600 leading-relaxed">
-                    {team.groupIds && team.groupIds.length > 0 
-                      ? team.groupIds.map(id => {
-                          const g = groups.find(g => g.id === id);
-                          return g ? `${g.name} (${g.gugus})` : null;
-                        }).filter(Boolean).join(', ')
-                      : <span className="text-slate-400 italic">Belum ada grup</span>
-                    }
-                  </td>
-
-                  <td className="px-6 py-4 text-right flex justify-end gap-2">
-                    <button onClick={() => openEdit(team)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(team.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
-                  </td>
-                </tr>
-              ))}
+              {teams.map((team) => {
+                const teamGroups = getGroupsForTeam(team.id);
+                return (
+                  <tr key={team.id} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 font-medium text-slate-800">{team.name}</td>
+                    <td className="px-6 py-4 text-slate-600 leading-relaxed">
+                      {teamGroups.length > 0 ? (
+                        teamGroups.map(g => `${g.name} (${g.gugus})`).join(', ')
+                      ) : (
+                        <span className="text-slate-400 italic">Belum ada grup</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <button onClick={() => openEdit(team)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(team.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -170,39 +145,9 @@ export default function TeamList() {
             <label className={labelClass}>Nama Tim</label>
             <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={inputClass} placeholder="Misal: Tim 1" required autoFocus />
           </div>
-          
-          <div>
-            <label className={labelClass}>Pilih Grup (Bisa lebih dari 1)</label>
-            <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2.5 bg-slate-50/50">
-              
-              {/* Pesan jika tidak ada grup sama sekali */}
-              {groups.length === 0 && <p className="text-xs text-slate-500 text-center py-2">Belum ada master grup yang dibuat</p>}
-              
-              {/* Pesan jika semua grup sudah dibooking tim lain */}
-              {groups.length > 0 && availableGroups.length === 0 && (
-                <p className="text-xs text-amber-600 text-center py-2 font-medium">Semua grup sudah diambil oleh tim lain</p>
-              )}
-              
-              {/* Looping menggunakan availableGroups, BUKAN groups */}
-              {availableGroups.map(group => (
-                <label key={group.id} className="flex items-start gap-3 cursor-pointer group">
-                  <div className="flex items-center h-5">
-                    <input 
-                      type="checkbox" 
-                      checked={form.groupIds.includes(group.id)}
-                      onChange={() => handleGroupToggle(group.id)}
-                      className="w-4 h-4 rounded border-slate-300 text-[#17203A] focus:ring-[#17203A] transition-colors cursor-pointer"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-[#17203A] transition-colors">{group.name}</span>
-                    <span className="text-xs text-slate-500">{group.gugus}</span>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-          
+          <p className="text-xs text-slate-500">
+            Untuk menghubungkan Grup ke tim ini, atur lewat halaman <span className="font-medium">Daftar Grup</span> (pilih Tim di form Grup).
+          </p>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50">Batal</button>
             <button type="submit" className="px-4 py-2 bg-[#17203A] text-white rounded-lg text-sm font-semibold hover:bg-[#232f52]">Simpan</button>

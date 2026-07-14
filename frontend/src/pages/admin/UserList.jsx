@@ -26,7 +26,7 @@ export default function UserList() {
       setUsers(usersData);
       setTeams(teamsData);
     } catch (err) {
-			console.error("Detail Error Fetch:", err.response || err.message || err);
+      console.error("Detail Error Fetch:", err.response || err.message || err);
       showToast('Gagal memuat data pengguna', 'error');
     } finally {
       setLoading(false);
@@ -39,14 +39,18 @@ export default function UserList() {
 
   const openCreate = () => {
     setEditItem(null);
-    setForm({ name: '', username: '', password: '', role: 'user' });
+    // teamId ikut di-reset -- sebelumnya field ini hilang dari form baru,
+    // jadi pengguna baru selalu ke-create tanpa tim walau dropdown-nya dipilih
+    setForm({ name: '', username: '', password: '', role: 'user', teamId: '' });
     setModalOpen(true);
   };
 
   const openEdit = (item) => {
     setEditItem(item);
     // Kosongkan password saat edit. Hanya diisi jika ingin diubah.
-    setForm({ name: item.name, username: item.username, password: '', role: item.role });
+    // teamId ikut di-load dari data existing -- sebelumnya selalu kosong,
+    // jadi tim yang sudah di-assign sebelumnya tidak kelihatan saat edit
+    setForm({ name: item.name, username: item.username, password: '', role: item.role, teamId: item.teamId || '' });
     setModalOpen(true);
   };
 
@@ -118,44 +122,42 @@ export default function UserList() {
       ) : (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <table className="w-full text-left text-sm">
-						<thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-							<tr>
-								<th className="px-6 py-4">Nama Lengkap</th>
-								<th className="px-6 py-4">Username</th>
-								<th className="px-6 py-4">Peran (Role)</th>
-								<th className="px-6 py-4">Tim</th> 
-								<th className="px-6 py-4 text-right">Aksi</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-slate-100">
-							{users.map((user) => (
-								<tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-									<td className="px-6 py-4 font-medium text-slate-800">{user.name}</td>
-									<td className="px-6 py-4 text-slate-600">@{user.username}</td>
-									<td className="px-6 py-4">
-										<span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-											user.role === 'admin' ? 'bg-[#C8933E]/10 text-[#C8933E]' : 'bg-slate-100 text-slate-600'
-										}`}>
-											{user.role.toUpperCase()}
-										</span>
-									</td>
-									
-									<td className="px-6 py-4 text-slate-600 font-medium">
-										{teams.find(t => t.id === user.teamId)?.name || '-'}
-									</td>
-
-									<td className="px-6 py-4 text-right flex justify-end gap-2">
-										<button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg transition-colors">
-											<Edit2 size={16} />
-										</button>
-										<button onClick={() => handleDelete(user.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-											<Trash2 size={16} />
-										</button>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+              <tr>
+                <th className="px-6 py-4">Nama Lengkap</th>
+                <th className="px-6 py-4">Username</th>
+                <th className="px-6 py-4">Peran (Role)</th>
+                <th className="px-6 py-4">Tim</th>
+                <th className="px-6 py-4 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-slate-800">{user.name}</td>
+                  <td className="px-6 py-4 text-slate-600">@{user.username}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      user.role === 'admin' ? 'bg-[#C8933E]/10 text-[#C8933E]' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {user.role.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-600 font-medium">
+                    {teams.find(t => t.id === user.teamId)?.name || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-right flex justify-end gap-2">
+                    <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg transition-colors">
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -207,14 +209,6 @@ export default function UserList() {
               <option value="admin">Admin</option>
             </select>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
-              Batal
-            </button>
-            <button type="submit" className="px-4 py-2 bg-[#17203A] hover:bg-[#232f52] text-white rounded-lg text-sm font-semibold transition-colors">
-              Simpan
-            </button>
-          </div>
           <div>
             <label className={labelClass}>Tim Asal</label>
             <select
@@ -227,6 +221,14 @@ export default function UserList() {
                 <option key={team.id} value={team.id}>{team.name}</option>
               ))}
             </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+              Batal
+            </button>
+            <button type="submit" className="px-4 py-2 bg-[#17203A] hover:bg-[#232f52] text-white rounded-lg text-sm font-semibold transition-colors">
+              Simpan
+            </button>
           </div>
         </form>
       </Modal>
