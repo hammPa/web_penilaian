@@ -1,13 +1,13 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Wrench } from 'lucide-react';
+import { Wrench, Trash } from 'lucide-react';
 import { useToast } from '../../../hooks/useToast';
 import variableService from '../../../services/variableService';
 import { getKriteriaNilai } from './scoreUtils';
 
 const LEVELS = [0, 1, 2, 3, 4, 5];
 
-export default function CriteriaRow({ tableId, criteria, variables, onVariableChanged, totalCell }) {
+export default function CriteriaRow({ tableId, criteria, variables, onVariableChanged, onDeleteCriteria, totalCell }) {
   const config = variables && variables.length > 0 ? variables[0] : null;
   const nilai = getKriteriaNilai(config);
   const [editingLevel, setEditingLevel] = useState(null); // index level yang sedang diedit
@@ -88,7 +88,17 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
     <tr>
       <td className="border border-slate-300 px-3 py-3 align-top">
         <div className="flex flex-col gap-1">
-          <span className="font-bold text-[#17203A] uppercase text-xs">{criteria.name}</span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold text-[#17203A] uppercase text-xs">{criteria.name}</span>
+            <button
+              onClick={() => onDeleteCriteria?.(criteria.id)}
+              className="text-[#C1443A] hover:text-[#a3372f] transition-colors shrink-0"
+              aria-label="Hapus kriteria"
+              title="Hapus kriteria"
+            >
+              <Trash className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <Link
             to={`/admin/tables/${tableId}/criteria/${criteria.id}`}
             className="inline-flex items-center gap-1.5 mt-2 text-[10px] font-bold uppercase tracking-wider text-[#C8933E] hover:text-[#a97a30] transition-colors"

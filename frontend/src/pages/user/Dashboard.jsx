@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Loading from '../../components/Loading';
 import groupService from '../../services/groupService';
-import teamService from '../../services/teamService';
 import { Users, ArrowRight } from 'lucide-react';
 
 export default function UserDashboard() {
@@ -11,22 +10,22 @@ export default function UserDashboard() {
 
   useEffect(() => {
     // Ambil data user dari LocalStorage
-    const userJson = localStorage.getItem('user'); 
+    const userJson = localStorage.getItem('user');
     const currentUser = userJson ? JSON.parse(userJson) : null;
 
-    // Hanya ambil data Grup dan Tim (Penilaian Terbaru sudah dihapus)
-    Promise.all([
-      groupService.getAll(),
-      currentUser?.teamId ? teamService.getById(currentUser.teamId) : Promise.resolve(null)
-    ])
-      .then(([groupsData, teamData]) => {
-        if (teamData && teamData.groupIds && teamData.groupIds.length > 0) {
-          // Filter grup sesuai dengan yang dimiliki tim
-          const allowedGroups = groupsData.filter(g => teamData.groupIds.includes(g.id));
-          setGroups(allowedGroups);
-        } else {
-          setGroups([]); 
-        }
+    if (!currentUser?.teamId) {
+      setGroups([]);
+      setLoading(false);
+      return;
+    }
+
+    groupService
+      .getAll()
+      .then((allGroups) => {
+        // Grup sekarang tahu sendiri milik tim mana (group.teamId),
+        // jadi cukup filter langsung tanpa perlu fetch Team lagi
+        const allowedGroups = allGroups.filter((g) => g.teamId === currentUser.teamId);
+        setGroups(allowedGroups);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -68,13 +67,13 @@ export default function UserDashboard() {
             >
               {/* Efek dekorasi cahaya di sudut kanan atas saat di-hover */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#C8933E]/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
-              
+
               <div className="mb-6 relative z-10">
                 {/* Ikon Card */}
                 <div className="w-12 h-12 bg-slate-50 group-hover:bg-[#C8933E]/10 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-[#C8933E] transition-colors mb-5">
                   <Users size={24} />
                 </div>
-                
+
                 {/* Judul Grup & Gugus */}
                 <h3 className="font-serif text-xl font-semibold text-[#17203A] group-hover:text-[#C8933E] transition-colors">
                   {group.name}

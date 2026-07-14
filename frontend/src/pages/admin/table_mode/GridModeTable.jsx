@@ -8,7 +8,7 @@ import { Pencil, Trash, ArrowRight, Plus, Check, X } from 'lucide-react';
 
 const LEVELS = [0, 1, 2, 3, 4, 5];
 
-export default function GridModeTable({ table, criteriaList, variablesByCriteria, onCriteriaChanged, onEditTable, onDeleteTable }) {
+export default function GridModeTable({ table, criteriaList, variablesByCriteria, onCriteriaChanged, onDeleteCriteria, onEditTable, onDeleteTable }) {
   const [addingRow, setAddingRow] = useState(false);
   const [newRow, setNewRow] = useState({ name: '', description: '' });
   const [saving, setSaving] = useState(false);
@@ -137,6 +137,7 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                     criteria={criteria}
                     variables={variablesByCriteria[criteria.id] || []}
                     onVariableChanged={onCriteriaChanged}
+                    onDeleteCriteria={onDeleteCriteria}
                     totalCell={
                       idx === 0
                         ? { value: totalNilai, rowSpan: criteriaList.length }

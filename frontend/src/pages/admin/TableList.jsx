@@ -107,6 +107,17 @@ export default function TableList() {
     }
   };
 
+  const handleDeleteCriteria = async (id) => {
+    if (!window.confirm('Hapus kriteria ini? Semua variabel/level di dalamnya juga akan terhapus.')) return;
+    try {
+      await criteriaService.remove(id);
+      showToast('Kriteria dihapus', 'success');
+      fetchData();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal menghapus kriteria', 'error');
+    }
+  };
+
   if (loading) return <Loading />;
 
   const inputClass =
@@ -168,6 +179,7 @@ export default function TableList() {
               criteriaList={criteria.filter((c) => c.tableId === table.id)}
               variablesByCriteria={variablesByCriteria}
               onCriteriaChanged={fetchData}
+              onDeleteCriteria={handleDeleteCriteria}
               onEditTable={openEdit}
               onDeleteTable={handleDelete}
             />
