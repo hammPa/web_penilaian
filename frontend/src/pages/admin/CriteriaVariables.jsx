@@ -4,24 +4,26 @@ import Loading from '../../components/Loading';
 import { useToast } from '../../hooks/useToast';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Minus } from 'lucide-react';
 
-const defaultVariables = Array.from({ length: 6 }, () => ({ description: '' }));
+const DEFAULT_LEVEL_COUNT = 5;
+const MIN_LEVEL_COUNT = 2;
+const makeDefaultVariables = (count) => Array.from({ length: count }, () => ({ description: '' }));
 
 export default function CriteriaVariables() {
   const { tableId, criteriaId } = useParams();
   const [criteria, setCriteria] = useState(null);
-  
+
   const [existingId, setExistingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
 
   const [form, setForm] = useState({
-    name: '', // Tambahkan state name
+    name: '',
     weight: '',
     formula: 'bobot * skor',
-    variables: [...defaultVariables]
+    variables: makeDefaultVariables(DEFAULT_LEVEL_COUNT)
   });
 
   useEffect(() => {
@@ -32,12 +34,12 @@ export default function CriteriaVariables() {
           variableService.getAll(criteriaId)
         ]);
         setCriteria(critData);
-        
+
         if (varData && varData.length > 0) {
           const item = varData[0];
           setExistingId(item.id);
           setForm({
-            name: item.name || '', // Muat name
+            name: item.name || '',
             weight: item.weight,
             formula: item.formula,
             variables: item.variables.map(v => ({ description: v.description }))
@@ -55,9 +57,12 @@ export default function CriteriaVariables() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    // Validasi name ditambahkan
     if (!form.name || form.weight === '' || !form.formula) {
       showToast('Nama, bobot, dan formula wajib diisi', 'error');
+      return;
+    }
+    if (form.variables.length < MIN_LEVEL_COUNT) {
+      showToast(`Minimal harus ada ${MIN_LEVEL_COUNT} kolom skor`, 'error');
       return;
     }
 
@@ -76,6 +81,24 @@ export default function CriteriaVariables() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const addColumn = () => {
+    setForm(prev => ({
+      ...prev,
+      variables: [...prev.variables, { description: '' }]
+    }));
+  };
+
+  const removeColumn = () => {
+    if (form.variables.length <= MIN_LEVEL_COUNT) {
+      showToast(`Minimal harus ada ${MIN_LEVEL_COUNT} kolom skor`, 'error');
+      return;
+    }
+    setForm(prev => ({
+      ...prev,
+      variables: prev.variables.slice(0, -1)
+    }));
   };
 
   if (loading) return <Loading />;
@@ -108,44 +131,42 @@ export default function CriteriaVariables() {
       </div>
 
       <form onSubmit={handleSave} className="bg-slate-50 border border-slate-100 p-6 md:p-8 rounded-2xl shadow-sm space-y-8">
-        
+
         {/* Section 1: Konfigurasi Dasar */}
         <div className="space-y-6">
-          {/* Baris Pertama: Nama Variabel full width */}
           <div>
             <label className={labelClass}>Nama Variabel</label>
-            <input 
-              type="text" 
-              value={form.name} 
-              onChange={e => setForm({ ...form, name: e.target.value })} 
-              className={inputClass} 
+            <input
+              type="text"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              className={inputClass}
               placeholder="Contoh: NILAI CONTROL BOARD"
-              required 
+              required
             />
           </div>
 
-          {/* Baris Kedua: Bobot dan Formula berdampingan */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className={labelClass}>Bobot Kriteria</label>
-              <input 
-                type="number" 
-                step="0.1" 
-                value={form.weight} 
-                onChange={e => setForm({ ...form, weight: e.target.value })} 
-                className={inputClass} 
+              <input
+                type="number"
+                step="0.1"
+                value={form.weight}
+                onChange={e => setForm({ ...form, weight: e.target.value })}
+                className={inputClass}
                 placeholder="Contoh: 1.5"
-                required 
+                required
               />
             </div>
             <div>
               <label className={labelClass}>Formula Penilaian</label>
-              <input 
-                type="text" 
-                value={form.formula} 
-                onChange={e => setForm({ ...form, formula: e.target.value })} 
-                className={inputClass} 
-                required 
+              <input
+                type="text"
+                value={form.formula}
+                onChange={e => setForm({ ...form, formula: e.target.value })}
+                className={inputClass}
+                required
               />
               <p className="text-xs text-slate-500 mt-1.5 font-medium">Gunakan variabel: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-700">bobot</code>, <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-700">skor</code></p>
             </div>
@@ -154,13 +175,34 @@ export default function CriteriaVariables() {
 
         <hr className="border-slate-200" />
 
-        {/* Section 2: Variabel / Skor (0-5) */}
+        {/* Section 2: Variabel / Skor (jumlah kolom fleksibel) */}
         <div>
-          <div className="mb-4">
-            <h3 className="text-base font-semibold text-slate-800">Deskripsi Skor (0 - 5)</h3>
-            <p className="text-xs text-slate-500">Kosongkan kolom jika skor tersebut tidak memiliki deskripsi khusus.</p>
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">Deskripsi Skor</h3>
+              <p className="text-xs text-slate-500">
+                Kosongkan kolom jika skor tersebut tidak memiliki deskripsi khusus. Skor tertinggi = {form.variables.length - 1}.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={removeColumn}
+                disabled={form.variables.length <= MIN_LEVEL_COUNT}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <Minus size={14} /> Kolom
+              </button>
+              <button
+                type="button"
+                onClick={addColumn}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#C8933E]/40 bg-[#C8933E]/5 text-xs font-medium text-[#8a6224] hover:bg-[#C8933E]/10 transition-colors"
+              >
+                <Plus size={14} /> Kolom
+              </button>
+            </div>
           </div>
-          
+
           <div className="space-y-3">
             {form.variables.map((v, idx) => (
               <div key={idx} className="flex items-start gap-3">
@@ -178,15 +220,33 @@ export default function CriteriaVariables() {
                   className={`${inputClass} min-h-[44px] resize-y py-2.5`}
                   rows="2"
                 />
+                {form.variables.length > MIN_LEVEL_COUNT && idx === form.variables.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={removeColumn}
+                    className="shrink-0 mt-1.5 text-slate-300 hover:text-[#C1443A] transition-colors"
+                    title="Hapus kolom skor tertinggi ini"
+                  >
+                    <Minus size={16} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={addColumn}
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#C8933E] hover:text-[#a97a30] transition-colors"
+          >
+            <Plus size={14} /> Tambah kolom skor {form.variables.length}
+          </button>
         </div>
 
         {/* Action Button */}
         <div className="flex justify-end pt-4">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={saving}
             className="flex items-center gap-2 bg-[#17203A] hover:bg-[#232f52] text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all shadow-sm disabled:opacity-70"
           >

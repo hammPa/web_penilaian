@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import Table from '../../components/Table';
 import Modal from '../../components/Modal';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
@@ -6,10 +8,8 @@ import { useToast } from '../../hooks/useToast';
 import tableService from '../../services/tableService';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
-import ListModeTable from './list_mode/ListModeTable';
 import GridModeTable from './table_mode/GridModeTable';
-import { LayoutGrid, List } from 'lucide-react';
-
+import { LayoutGrid, List, Pencil, Trash, ArrowRight } from 'lucide-react';
 
 export default function TableList() {
   const [tables, setTables] = useState([]);
@@ -107,10 +107,10 @@ export default function TableList() {
     }
   };
 
-  const handleDeleteCriteria = async (id) => {
-    if (!window.confirm('Hapus kriteria ini? Semua variabel/level di dalamnya juga akan terhapus.')) return;
+  // Hapus kriteria langsung dari mode Tabel (tombol trash di CriteriaRow)
+  const handleDeleteCriteria = async (criteriaId) => {
     try {
-      await criteriaService.remove(id);
+      await criteriaService.remove(criteriaId);
       showToast('Kriteria dihapus', 'success');
       fetchData();
     } catch (err) {
@@ -164,12 +164,43 @@ export default function TableList() {
       {tables.length === 0 ? (
         <EmptyState message="Belum ada tabel penilaian" icon={<LayoutGrid />} />
       ) : viewMode === 'list' ? (
-        <ListModeTable 
-          tables={tables}
-          criteriaCounts={criteriaCounts}
-          onEditTable={openEdit}
-          onDeleteTable={handleDelete}
-        />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <Table
+            headers={['Nama Tabel', 'Deskripsi', 'Jumlah Kriteria', 'Aksi']}
+            data={tables}
+            renderRow={(item) => (
+              <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                <td className="px-6 py-4">
+                  <Link to={`/admin/tables/${item.id}`} className="font-medium text-[#17203A] hover:text-[#C8933E] transition-colors">
+                    {item.name}
+                  </Link>
+                </td>
+                <td className="px-6 py-4 text-slate-500">{item.description || '-'}</td>
+                <td className="px-6 py-4">
+                  <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-[#C8933E]/10 text-[#8a6224]">
+                    {criteriaCounts[item.id] || 0} kriteria
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-4 text-sm font-medium items-center">
+                    <Link
+                      to={`/admin/tables/${item.id}`}
+                      className="text-[#17203A] hover:text-[#C8933E] transition-colors inline-flex items-center gap-1"
+                    >
+                      Kelola <ArrowRight size={14} />
+                    </Link>
+                    <button onClick={(e) => openEdit(item, e)} className="text-[#17203A] cursor-pointer hover:text-[#C8933E] transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={(e) => handleDelete(item.id, e)} className="text-[#C1443A] cursor-pointer hover:text-[#a3372f] transition-colors">
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
+        </div>
       ) : (
         <div className="space-y-6">
           {tables.map((table) => (

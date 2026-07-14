@@ -1,18 +1,26 @@
 import { useState } from 'react';
 import { useToast } from '../../../hooks/useToast';
 import { Link } from 'react-router-dom';
-import CriteriaRow from "./CriteriaRow"; // Pastikan import mengarah ke file yang baru
+import CriteriaRow from "./CriteriaRow";
 import criteriaService from '../../../services/criteriaService';
 import { getKriteriaNilai } from './scoreUtils';
 import { Pencil, Trash, ArrowRight, Plus, Check, X } from 'lucide-react';
 
-const LEVELS = [0, 1, 2, 3, 4, 5];
+const DEFAULT_LEVEL_COUNT = 5; // dipakai kalau tabel belum punya variabel sama sekali
 
 export default function GridModeTable({ table, criteriaList, variablesByCriteria, onCriteriaChanged, onDeleteCriteria, onEditTable, onDeleteTable }) {
   const [addingRow, setAddingRow] = useState(false);
   const [newRow, setNewRow] = useState({ name: '', description: '' });
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
+
+  // Jumlah kolom level tidak lagi hardcode 0-5 -- dihitung dari variabel
+  // (variables[0] tiap kriteria) dengan jumlah level TERBANYAK di tabel ini.
+  const maxLevelCount = criteriaList.reduce((max, c) => {
+    const config = variablesByCriteria[c.id]?.[0];
+    return Math.max(max, config?.variables?.length || 0);
+  }, DEFAULT_LEVEL_COUNT);
+  const levelIndices = Array.from({ length: maxLevelCount }, (_, i) => i);
 
   // Total Nilai = jumlah nilai (bobot x level tertinggi terisi) semua kriteria
   const totalNilai = criteriaList.reduce((sum, c) => {
@@ -82,7 +90,6 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
-              {/* INI HEADER UTAMA YANG DIPAKAI */}
               <tr>
                 <th
                   rowSpan={2}
@@ -91,7 +98,7 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                   KRITERIA {table.name?.toUpperCase()}
                 </th>
                 <th
-                  colSpan={LEVELS.length}
+                  colSpan={levelIndices.length}
                   className="border border-slate-300 bg-[#F7D9B8] px-3 py-1.5 text-center font-bold text-[#17203A]"
                 >
                   NILAI {table.name?.toUpperCase()}
@@ -110,7 +117,7 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                 </th>
               </tr>
               <tr>
-                {LEVELS.map((lvl) => (
+                {levelIndices.map((lvl) => (
                   <th
                     key={lvl}
                     className="border border-slate-300 bg-slate-100 px-3 py-1.5 text-center font-semibold text-slate-600 w-32"
@@ -121,11 +128,10 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
               </tr>
             </thead>
 
-            {/* DATA BARIS DIMASUKKAN KE SINI */}
             <tbody>
               {criteriaList.length === 0 && !addingRow ? (
                 <tr>
-                  <td colSpan={LEVELS.length + 3} className="border border-slate-300 px-3 py-6 text-center text-sm text-slate-400">
+                  <td colSpan={levelIndices.length + 3} className="border border-slate-300 px-3 py-6 text-center text-sm text-slate-400">
                     Belum ada kriteria pada tabel ini
                   </td>
                 </tr>
@@ -138,6 +144,7 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                     variables={variablesByCriteria[criteria.id] || []}
                     onVariableChanged={onCriteriaChanged}
                     onDeleteCriteria={onDeleteCriteria}
+                    levelIndices={levelIndices}
                     totalCell={
                       idx === 0
                         ? { value: totalNilai, rowSpan: criteriaList.length }
@@ -147,10 +154,9 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
                 ))
               )}
 
-              {/* FORM TAMBAH KRITERIA */}
               {addingRow && (
                 <tr>
-                  <td colSpan={LEVELS.length + 3} className="border border-slate-300 p-2 bg-[#C8933E]/5">
+                  <td colSpan={levelIndices.length + 3} className="border border-slate-300 p-2 bg-[#C8933E]/5">
                     <div className="flex items-center gap-2">
                       <input
                         autoFocus
