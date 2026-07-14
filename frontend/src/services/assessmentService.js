@@ -1,7 +1,7 @@
 import api from '../api/axiosInstance';
 
-const create = async (selections) => {
-  const res = await api.post('/assessments', { selections });
+const create = async (groupId, sessionId, selections, photos = []) => {
+  const res = await api.post('/assessments', { groupId, sessionId, selections, photos });
   return res.data.data;
 };
 

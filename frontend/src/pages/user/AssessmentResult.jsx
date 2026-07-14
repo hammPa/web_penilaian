@@ -7,6 +7,7 @@ import assessmentService from '../../services/assessmentService';
 import variableService from '../../services/variableService';
 import criteriaService from '../../services/criteriaService';
 import tableService from '../../services/tableService';
+import { Image as ImageIcon } from 'lucide-react';
 
 function ScoreDial({ percentage = 0, size = 116 }) {
   const angle = Math.min(100, Math.max(0, percentage)) * 3.6;
@@ -179,7 +180,7 @@ export default function AssessmentResult() {
       </div>
 
       {/* Summary band */}
-      <div className="mb-8 rounded-xl bg-[#17203A] text-white p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
+      <div className="mb-6 rounded-xl bg-[#17203A] text-white p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
         <ScoreDial percentage={percentage} />
         <div className="flex-1 w-full grid grid-cols-2 gap-4">
           <div>
@@ -197,6 +198,33 @@ export default function AssessmentResult() {
           </div>
         </div>
       </div>
+
+      {/* TAMPILKAN FOTO DOKUMENTASI DI SINI JIKA ADA */}
+      {assessment.photos && assessment.photos.length > 0 && (
+        <div className="mb-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 text-[#17203A]">
+            <ImageIcon size={18} />
+            <h3 className="font-serif text-lg font-semibold">Foto Dokumentasi</h3>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {assessment.photos.map((photoUrl, idx) => (
+              <a 
+                key={idx} 
+                href={`http://localhost:5000${photoUrl}`} // Sesuaikan dengan port backend kamu jika perlu
+                target="_blank" 
+                rel="noreferrer"
+                className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-slate-200 shadow-sm group hover:ring-2 hover:ring-[#C8933E] transition-all"
+              >
+                <img 
+                  src={`http://localhost:5000${photoUrl}`} // Sesuaikan dengan port backend kamu jika perlu
+                  alt={`Dokumentasi ${idx + 1}`} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tombol toggle detail */}
       <div className="mb-6 flex justify-center">

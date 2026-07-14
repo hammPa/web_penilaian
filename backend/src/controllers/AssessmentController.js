@@ -4,9 +4,9 @@ const { success } = require('../utils/responseFormatter');
 class AssessmentController {
   async create(req, res, next) {
     try {
-      const { selections } = req.body;
+      const { groupId, sessionId, selections, photos } = req.body;
       // selections: [{ variableId, selectedLevel }]
-      const assessment = await assessmentService.create(req.user.id, selections);
+      const assessment = await assessmentService.create(req.user.id, groupId, sessionId, selections, photos);
       success(res, assessment, 'Penilaian berhasil disimpan', 201);
     } catch (err) {
       next(err);

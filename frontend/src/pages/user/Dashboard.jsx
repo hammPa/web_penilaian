@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import Loading from '../../components/Loading';
 import groupService from '../../services/groupService';
 import sessionService from '../../services/sessionService';
-import { Users, ArrowRight, CalendarDays } from 'lucide-react';
+import assessmentService from '../../services/assessmentService'; // Ditambahkan
+import { Users, ArrowRight, CalendarDays, CheckCircle } from 'lucide-react'; // Ditambahkan CheckCircle
 
 export default function UserDashboard() {
   const [groups, setGroups] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [assessments, setAssessments] = useState([]); // State untuk riwayat
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -22,12 +24,13 @@ export default function UserDashboard() {
       return;
     }
 
-    // Fetch data grup dan sesi secara bersamaan
+    // Fetch data grup, sesi, dan riwayat penilaian secara bersamaan
     Promise.all([
       groupService.getAll(),
-      sessionService.getAll()
+      sessionService.getAll(),
+      assessmentService.getAll() // Mengambil penilaian milik user ini
     ])
-      .then(([allGroups, allSessions]) => {
+      .then(([allGroups, allSessions, allAssessments]) => {
         // Filter grup sesuai tim
         const allowedGroups = allGroups.filter((g) => g.teamId === currentUser.teamId);
         setGroups(allowedGroups);
@@ -37,12 +40,20 @@ export default function UserDashboard() {
         if (allSessions.length > 0) {
           setSelectedSessionId(allSessions[0].id);
         }
+
+        // Simpan riwayat penilaian
+        setAssessments(allAssessments);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Loading />;
+
+  // Dapatkan ID grup mana saja yang SUDAH dinilai pada sesi yang sedang dipilih
+  const assessedGroupIds = assessments
+    .filter(a => a.sessionId === selectedSessionId)
+    .map(a => a.groupId);
 
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-6 p-6 md:-m-8 md:p-8">
@@ -106,37 +117,63 @@ export default function UserDashboard() {
       ) : (
         // Tampilan Card Grid
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groups.map(group => (
-            <Link
-              key={group.id}
-              to={`/assessment/new?groupId=${group.id}&sessionId=${selectedSessionId}`}
-              className="group bg-white border border-slate-200 hover:border-[#C8933E] rounded-xl p-6 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full"
-            >
-              {/* Efek dekorasi cahaya di sudut kanan atas saat di-hover */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#C8933E]/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          {groups.map(group => {
+            const isAssessed = assessedGroupIds.includes(group.id);
 
-              <div className="mb-6 relative z-10">
-                {/* Ikon Card */}
-                <div className="w-12 h-12 bg-slate-50 group-hover:bg-[#C8933E]/10 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-[#C8933E] transition-colors mb-5">
-                  <Users size={24} />
+            return isAssessed ? (
+              // TAMPILAN JIKA SUDAH DINILAI (TERKUNCI)
+              <div
+                key={group.id}
+                className="group bg-slate-50/70 border border-slate-200 rounded-xl p-6 shadow-sm opacity-80 relative overflow-hidden flex flex-col h-full cursor-not-allowed"
+              >
+                <div className="mb-6 relative z-10">
+                  <div className="w-12 h-12 bg-[#0F9D6D]/10 rounded-xl flex items-center justify-center text-[#0F9D6D] mb-5">
+                    <CheckCircle size={24} />
+                  </div>
+                  <h3 className="font-serif text-xl font-semibold text-slate-500">
+                    {group.name}
+                  </h3>
+                  <p className="text-[11px] font-medium text-slate-400 mt-2 uppercase tracking-wider">
+                    {group.gugus}
+                  </p>
+                </div>
+                <div className="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between text-sm font-bold text-[#0F9D6D] relative z-10">
+                  <span>Sudah Dinilai</span>
+                </div>
+              </div>
+            ) : (
+              // TAMPILAN NORMAL (BISA DIKLIK)
+              <Link
+                key={group.id}
+                to={`/assessment/new?groupId=${group.id}&sessionId=${selectedSessionId}`}
+                className="group bg-white border border-slate-200 hover:border-[#C8933E] rounded-xl p-6 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full"
+              >
+                {/* Efek dekorasi cahaya di sudut kanan atas saat di-hover */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#C8933E]/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <div className="mb-6 relative z-10">
+                  {/* Ikon Card */}
+                  <div className="w-12 h-12 bg-slate-50 group-hover:bg-[#C8933E]/10 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-[#C8933E] transition-colors mb-5">
+                    <Users size={24} />
+                  </div>
+
+                  {/* Judul Grup & Gugus */}
+                  <h3 className="font-serif text-xl font-semibold text-[#17203A] group-hover:text-[#C8933E] transition-colors">
+                    {group.name}
+                  </h3>
+                  <p className="text-[11px] font-medium text-slate-500 mt-2 uppercase tracking-wider">
+                    {group.gugus}
+                  </p>
                 </div>
 
-                {/* Judul Grup & Gugus */}
-                <h3 className="font-serif text-xl font-semibold text-[#17203A] group-hover:text-[#C8933E] transition-colors">
-                  {group.name}
-                </h3>
-                <p className="text-[11px] font-medium text-slate-500 mt-2 uppercase tracking-wider">
-                  {group.gugus}
-                </p>
-              </div>
-
-              {/* Tombol Aksi di bagian bawah Card */}
-              <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-sm font-semibold text-slate-400 group-hover:text-[#C8933E] transition-colors relative z-10">
-                <span>Mulai Penilaian</span>
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-          ))}
+                {/* Tombol Aksi di bagian bawah Card */}
+                <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-sm font-semibold text-slate-400 group-hover:text-[#C8933E] transition-colors relative z-10">
+                  <span>Mulai Penilaian</span>
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

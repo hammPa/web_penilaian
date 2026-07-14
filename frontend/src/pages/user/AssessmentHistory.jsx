@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import assessmentService from '../../services/assessmentService';
+import groupService from '../../services/groupService'; // Ditambahkan
+import sessionService from '../../services/sessionService'; // Ditambahkan
 
 function ScoreBadge({ percentage }) {
   const tone =
@@ -28,8 +30,32 @@ export default function AssessmentHistory() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    assessmentService.getAll()
-      .then(data => setAssessments(data))
+    // Ambil data assessment, group, dan session sekaligus
+    Promise.all([
+      assessmentService.getAll(),
+      groupService.getAll(),
+      sessionService.getAll()
+    ])
+      .then(([assessmentsData, groupsData, sessionsData]) => {
+        // Gabungkan data agar assessment punya nama grup dan nama sesi
+        const mappedAssessments = assessmentsData.map(assessment => {
+          const group = groupsData.find(g => g.id === assessment.groupId);
+          const session = sessionsData.find(s => s.id === assessment.sessionId);
+          
+          return {
+            ...assessment,
+            groupName: group?.name || 'Grup Tidak Diketahui',
+            sessionName: session?.name || 'Sesi Tidak Diketahui'
+          };
+        });
+
+        // Urutkan dari yang paling baru
+        const sortedAssessments = mappedAssessments.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
+        setAssessments(sortedAssessments);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -48,10 +74,16 @@ export default function AssessmentHistory() {
       {assessments.length === 0 ? (
         <EmptyState message="Belum ada penilaian" />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="text-left font-medium text-[11px] uppercase tracking-[0.1em] text-slate-400 px-6 py-3">
+                  Grup
+                </th>
+                <th className="text-left font-medium text-[11px] uppercase tracking-[0.1em] text-slate-400 px-6 py-3">
+                  Sesi
+                </th>
                 <th className="text-left font-medium text-[11px] uppercase tracking-[0.1em] text-slate-400 px-6 py-3">
                   Tanggal
                 </th>
@@ -71,8 +103,16 @@ export default function AssessmentHistory() {
                 const maxTotal = getMaxTotal(item.results.total, item.results.percentage);
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-6 py-4 font-semibold text-[#17203A]">
+                      {item.groupName}
+                    </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {new Date(item.createdAt).toLocaleString('id-ID')}
+                      {item.sessionName}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {new Date(item.createdAt).toLocaleString('id-ID', {
+                        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
                     </td>
                     <td className="px-6 py-4 font-serif font-semibold text-[#17203A]">
                       {item.results.total}

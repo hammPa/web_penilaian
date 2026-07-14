@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Card from '../../components/Card';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
@@ -8,6 +8,8 @@ import tableService from '../../services/tableService';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import assessmentService from '../../services/assessmentService';
+import api from '../../api/axiosInstance';
+import { Camera, X } from 'lucide-react';
 
 const LEVELS = [0, 1, 2, 3, 4, 5];
 
@@ -17,11 +19,28 @@ export default function AssessmentForm() {
   const [variables, setVariables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [selections, setSelections] = useState({}); // { variableId: level or null }
+  const [selections, setSelections] = useState({});
+  
+  // State untuk Foto Dokumentasi
+  const [photos, setPhotos] = useState([]);
+  const [previews, setPreviews] = useState([]);
+
+  // Ambil groupId dan sessionId dari parameter URL
+  const [searchParams] = useSearchParams();
+  const groupId = searchParams.get('groupId');
+  const sessionId = searchParams.get('sessionId');
+
   const navigate = useNavigate();
   const { showToast } = useToast();
 
   useEffect(() => {
+    // Jika tidak ada groupId atau sessionId, kembalikan ke dashboard
+    if (!groupId || !sessionId) {
+      showToast('Akses tidak valid. Silakan pilih grup dari Dashboard.', 'error');
+      navigate('/dashboard');
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const [tableData, critData, varData] = await Promise.all([
@@ -29,9 +48,14 @@ export default function AssessmentForm() {
           criteriaService.getAll(),
           variableService.getAll()
         ]);
-        setTables(tableData);
+        
+        // Filter tabel agar hanya menampilkan tabel yang sesuai dengan sessionId
+        const filteredTables = tableData.filter(t => t.sessionId === sessionId);
+        setTables(filteredTables);
+        
         setCriteria(critData);
         setVariables(varData);
+        
         const initial = {};
         varData.forEach(v => { initial[v.id] = null; });
         setSelections(initial);
@@ -42,14 +66,36 @@ export default function AssessmentForm() {
       }
     };
     fetchData();
-  }, []);
+  }, [groupId, sessionId, navigate]);
 
   const handleLevelChange = (variableId, level) => {
     setSelections(prev => ({ ...prev, [variableId]: level }));
   };
 
+  // --- Fungsi Handle Foto ---
+  const handlePhotoChange = (e) => {
+    const files = Array.from(e.target.files);
+    setPhotos((prev) => [...prev, ...files]);
+    
+    // Buat URL sementara untuk preview di layar
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setPreviews((prev) => [...prev, ...newPreviews]);
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+    setPreviews(previews.filter((_, i) => i !== index));
+  };
+  // -------------------------
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!groupId || !sessionId) {
+      showToast('Data Grup atau Sesi tidak valid.', 'error');
+      return;
+    }
+
     const selectionArray = Object.entries(selections)
       .filter(([_, level]) => level !== null)
       .map(([variableId, level]) => ({
@@ -64,17 +110,27 @@ export default function AssessmentForm() {
 
     setSubmitting(true);
     try {
-      const result = await assessmentService.create(selectionArray);
+      let uploadedUrls = [];
+
+      // TAHAP 1: Jika ada foto, upload dulu ke server
+      if (photos.length > 0) {
+        const formData = new FormData();
+        photos.forEach(photo => formData.append('photos', photo));
+        
+        const uploadRes = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        uploadedUrls = uploadRes.data.data; // ex: ['/uploads/doc-xxx.jpg']
+      }
+
+      // TAHAP 2: Submit data Penilaian beserta groupId, sessionId, dan URL Foto
+      const result = await assessmentService.create(groupId, sessionId, selectionArray, uploadedUrls);
       showToast('Penilaian berhasil disimpan', 'success');
 
-      // PERBAIKAN: hindari "cannot read properties of undefined (reading 'id')"
-      // jika response API ternyata tidak berbentuk { id: ... } secara langsung
       const newId = result?.id ?? result?.data?.id ?? result?.data?.data?.id;
       if (newId) {
         navigate(`/assessments/${newId}`);
       } else {
-        // Response tersimpan tapi bentuknya tidak sesuai dugaan, jangan crash.
-        console.warn('assessmentService.create() tidak mengembalikan id yang jelas:', result);
         navigate('/assessments');
       }
     } catch (err) {
@@ -86,10 +142,9 @@ export default function AssessmentForm() {
 
   if (loading) return <Loading />;
   if (tables.length === 0 || criteria.length === 0 || variables.length === 0) {
-    return <EmptyState message="Data tabel/kriteria/variabel belum tersedia" />;
+    return <EmptyState message="Data tabel/kriteria/variabel belum tersedia untuk sesi ini" />;
   }
 
-  // Kelompokkan: tabel -> kriteria -> variabel
   const groupedTables = tables.map(t => {
     const tableCriteria = criteria.filter(c => c.tableId === t.id);
     return {
@@ -101,23 +156,24 @@ export default function AssessmentForm() {
     };
   });
 
-  // Hitung progress: jumlah variabel yang sudah dipilih level
   const answeredCount = Object.values(selections).filter(level => level !== null).length;
-  const totalCount = variables.length;
+  // Hitung total count hanya untuk variabel yang ada di tabel sesi ini
+  let totalCount = 0;
+  groupedTables.forEach(t => {
+    t.criteria.forEach(c => {
+      totalCount += c.variables.length;
+    });
+  });
+  
   const progressPct = totalCount ? Math.round((answeredCount / totalCount) * 100) : 0;
 
-  // PERBAIKAN: Fungsi untuk mendapatkan level yang tersedia
   const getAvailableLevels = (variable) => {
-    // Ambil object variables, jika undefined beri fallback object kosong
     const variableData = variable.variables || {};
-
-    // Petakan dari konstanta LEVELS (0-5) untuk menjaga urutan
     return LEVELS.map((level) => ({
       level: level,
       description: variableData[level]?.description || ''
     })).filter(item => {
       const desc = item.description.trim();
-      // Sembunyikan yang deskripsinya kosong ATAU hanya berisi "-"
       return desc !== '' && desc !== '-';
     });
   };
@@ -181,7 +237,7 @@ export default function AssessmentForm() {
                               <div key={variable.id} className="py-4">
                                 <div className="flex items-baseline justify-between mb-2">
                                   <span className="text-sm font-medium text-slate-700">{variable.name}</span>
-                                  <span className="text-xs text-slate-400">Bobot {variable.weight}</span>
+                                  <span className="text-xs text-slate-400">Koefisien {variable.weight}</span>
                                 </div>
                                 {variable.description && (
                                   <p className="text-xs text-slate-500 mb-3">{variable.description}</p>
@@ -244,13 +300,47 @@ export default function AssessmentForm() {
           ))}
         </div>
 
+        {/* WIDGET UPLOAD FOTO DOKUMENTASI */}
+        <div className="mt-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="font-semibold text-[#17203A] mb-4">Dokumentasi Area (Opsional)</h3>
+          
+          <div className="flex flex-wrap gap-4">
+            {previews.map((src, index) => (
+              <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-slate-200 group shadow-sm">
+                <img src={src} alt="Preview" className="w-full h-full object-cover" />
+                <button 
+                  type="button"
+                  onClick={() => removePhoto(index)}
+                  className="absolute top-1.5 right-1.5 bg-red-500/90 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md"
+                  title="Hapus foto"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+
+            <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#C8933E] hover:bg-[#C8933E]/5 transition-colors text-slate-400 hover:text-[#C8933E]">
+              <Camera size={24} className="mb-1" />
+              <span className="text-[10px] font-medium mt-1">Tambah Foto</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                multiple 
+                onChange={handlePhotoChange} 
+                className="hidden" 
+              />
+            </label>
+          </div>
+          <p className="text-xs text-slate-400 mt-4">Upload foto dokumentasi tanpa batasan. Foto akan dikompresi otomatis untuk menghemat ruang.</p>
+        </div>
+
         <div className="mt-8 flex justify-end">
           <button
             type="submit"
             disabled={submitting}
-            className="bg-[#17203A] hover:bg-[#232f52] text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-sm"
+            className="bg-[#17203A] hover:bg-[#232f52] text-white px-8 py-3.5 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-sm text-sm"
           >
-            {submitting ? 'Menyimpan...' : 'Simpan Penilaian'}
+            {submitting ? 'Menyimpan & Mengunggah...' : 'Simpan Penilaian'}
           </button>
         </div>
       </form>
