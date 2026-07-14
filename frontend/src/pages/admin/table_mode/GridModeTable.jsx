@@ -16,10 +16,12 @@ export default function GridModeTable({ table, criteriaList, variablesByCriteria
 
   // Jumlah kolom level tidak lagi hardcode 0-5 -- dihitung dari variabel
   // (variables[0] tiap kriteria) dengan jumlah level TERBANYAK di tabel ini.
-  const maxLevelCount = criteriaList.reduce((max, c) => {
+  const maxLevelCount = criteriaList.length === 0
+  ? DEFAULT_LEVEL_COUNT
+  : criteriaList.reduce((max, c) => {
     const config = variablesByCriteria[c.id]?.[0];
     return Math.max(max, config?.variables?.length || 0);
-  }, DEFAULT_LEVEL_COUNT);
+  }, 0) || DEFAULT_LEVEL_COUNT;
   const levelIndices = Array.from({ length: maxLevelCount }, (_, i) => i);
 
   // Total Nilai = jumlah nilai (bobot x level tertinggi terisi) semua kriteria

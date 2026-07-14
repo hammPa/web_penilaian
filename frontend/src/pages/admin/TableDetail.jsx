@@ -33,9 +33,8 @@ export default function TableDetail() {
       setCriteria(criteriaData);
       const counts = {};
       allVariables.forEach(v => {
-        // Hitung berapa deskripsi skor yang sudah diisi teksnya
         const filledCount = v.variables.filter(skor => skor.description && skor.description.trim() !== '').length;
-        counts[v.criteriaId] = filledCount;
+        counts[v.criteriaId] = { filled: filledCount, total: v.variables.length };
       });
       setVariableCounts(counts);
     } catch (err) {
@@ -147,7 +146,7 @@ export default function TableDetail() {
                 <td className="px-6 py-4">
                   {variableCounts[item.id] !== undefined ? (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-[#C8933E]/10 text-[#8a6224] border border-[#C8933E]/20">
-                      {variableCounts[item.id]} / 6 Terisi
+                      {variableCounts[item.id].filled} / {variableCounts[item.id].total} Terisi
                     </span>
                   ) : (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
