@@ -4,7 +4,10 @@ const { success } = require('../utils/responseFormatter');
 class TableController {
   async getAll(req, res, next) {
     try {
-      const data = tableService.getAll();
+      const { sessionId } = req.query;
+      const data = sessionId
+        ? tableService.getBySessionId(sessionId)
+        : tableService.getAll();
       success(res, data);
     } catch (err) {
       next(err);

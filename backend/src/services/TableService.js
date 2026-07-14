@@ -2,10 +2,17 @@ const { v4: uuidv4 } = require('uuid');
 const tableRepository = require('../repositories/TableRepository');
 const criteriaRepository = require('../repositories/CriteriaRepository');
 const variableRepository = require('../repositories/VariableRepository');
+const sessionRepository = require('../repositories/SessionRepository');
 
 class TableService {
   getAll() {
     return tableRepository.findAll();
+  }
+
+  getBySessionId(sessionId) {
+    const session = sessionRepository.findById(sessionId);
+    if (!session) throw { status: 404, message: 'Sesi tidak ditemukan' };
+    return tableRepository.findBySessionId(sessionId);
   }
 
   getById(id) {
@@ -18,19 +25,31 @@ class TableService {
     if (!data.name) {
       throw { status: 400, message: 'Nama tabel wajib diisi' };
     }
+    if (!data.sessionId) {
+      throw { status: 400, message: 'Sesi wajib dipilih' };
+    }
+    const session = sessionRepository.findById(data.sessionId);
+    if (!session) throw { status: 404, message: 'Sesi tidak ditemukan' };
+
     const newTable = {
       id: uuidv4(),
       name: data.name,
-      description: data.description || ''
+      description: data.description || '',
+      sessionId: data.sessionId
     };
     return tableRepository.create(newTable);
   }
 
   update(id, data) {
     const existing = this.getById(id);
+    if (data.sessionId) {
+      const session = sessionRepository.findById(data.sessionId);
+      if (!session) throw { status: 404, message: 'Sesi tidak ditemukan' };
+    }
     const updated = {
       name: data.name || existing.name,
-      description: data.description !== undefined ? data.description : existing.description
+      description: data.description !== undefined ? data.description : existing.description,
+      sessionId: data.sessionId || existing.sessionId
     };
     return tableRepository.update(id, updated);
   }

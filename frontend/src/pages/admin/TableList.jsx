@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import Table from '../../components/Table';
 import Modal from '../../components/Modal';
 import Loading from '../../components/Loading';
@@ -8,10 +8,13 @@ import { useToast } from '../../hooks/useToast';
 import tableService from '../../services/tableService';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
+import sessionService from '../../services/sessionService';
 import GridModeTable from './table_mode/GridModeTable';
-import { LayoutGrid, List, Pencil, Trash, ArrowRight } from 'lucide-react';
+import { LayoutGrid, List, Pencil, Trash, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export default function TableList() {
+  const { sessionId } = useParams();
+  const [session, setSession] = useState(null);
   const [tables, setTables] = useState([]);
   const [criteria, setCriteria] = useState([]);
   const [variables, setVariables] = useState([]);
@@ -25,11 +28,13 @@ export default function TableList() {
 
   const fetchData = async () => {
     try {
-      const [tableData, criteriaData, variableData] = await Promise.all([
-        tableService.getAll(),
+      const [sessionData, tableData, criteriaData, variableData] = await Promise.all([
+        sessionService.getById(sessionId),
+        tableService.getAll(sessionId),
         criteriaService.getAll(),
         variableService.getAll()
       ]);
+      setSession(sessionData);
       setTables(tableData);
       setCriteria(criteriaData);
       setVariables(variableData);
@@ -42,7 +47,8 @@ export default function TableList() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   const criteriaCounts = criteria.reduce((acc, c) => {
     acc[c.tableId] = (acc[c.tableId] || 0) + 1;
@@ -82,7 +88,7 @@ export default function TableList() {
         await tableService.update(editItem.id, form);
         showToast('Tabel berhasil diperbarui', 'success');
       } else {
-        await tableService.create(form);
+        await tableService.create({ ...form, sessionId });
         showToast('Tabel berhasil ditambahkan', 'success');
       }
       setModalOpen(false);
@@ -107,7 +113,6 @@ export default function TableList() {
     }
   };
 
-  // Hapus kriteria langsung dari mode Tabel (tombol trash di CriteriaRow)
   const handleDeleteCriteria = async (criteriaId) => {
     try {
       await criteriaService.remove(criteriaId);
@@ -119,6 +124,13 @@ export default function TableList() {
   };
 
   if (loading) return <Loading />;
+  if (!session) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-slate-400 text-sm">Sesi tidak ditemukan</p>
+      </div>
+    );
+  }
 
   const inputClass =
     'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition';
@@ -126,9 +138,16 @@ export default function TableList() {
 
   return (
     <div>
+      <Link
+        to="/admin/sessions"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors mb-4"
+      >
+        <ArrowLeft size={16} /> Kembali ke Daftar Sesi
+      </Link>
+
       <div className="flex justify-between items-center mb-8">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Master Data</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Sesi: {session.name}</p>
           <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
             Tabel Penilaian
           </h1>
@@ -162,7 +181,7 @@ export default function TableList() {
       </div>
 
       {tables.length === 0 ? (
-        <EmptyState message="Belum ada tabel penilaian" icon={<LayoutGrid />} />
+        <EmptyState message="Belum ada tabel penilaian di sesi ini" icon={<LayoutGrid />} />
       ) : viewMode === 'list' ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <Table

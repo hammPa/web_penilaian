@@ -33,8 +33,7 @@ export default function TableDetail() {
       setCriteria(criteriaData);
       const counts = {};
       allVariables.forEach(v => {
-        const filledCount = v.variables.filter(skor => skor.description && skor.description.trim() !== '').length;
-        counts[v.criteriaId] = { filled: filledCount, total: v.variables.length };
+        counts[v.criteriaId] = (counts[v.criteriaId] || 0) + 1;
       });
       setVariableCounts(counts);
     } catch (err) {
@@ -108,7 +107,7 @@ export default function TableDetail() {
   return (
     <div>
       <Link
-        to="/admin/tables"
+        to={`/admin/sessions/${table.sessionId}/tables`}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors mb-4"
       >
         <ArrowLeft size={16} /> Kembali ke Daftar Tabel
@@ -144,29 +143,19 @@ export default function TableDetail() {
                 <td className="px-6 py-4 font-medium text-[#17203A]">{item.name}</td>
                 <td className="px-6 py-4 text-slate-500">{item.description || '-'}</td>
                 <td className="px-6 py-4">
-                  {variableCounts[item.id] !== undefined ? (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-[#C8933E]/10 text-[#8a6224] border border-[#C8933E]/20">
-                      {variableCounts[item.id].filled} / {variableCounts[item.id].total} Terisi
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                      Belum diatur
-                    </span>
-                  )}
+                  <Link
+                    to={`/admin/tables/${tableId}/criteria/${item.id}`}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-[#17203A] hover:text-[#C8933E] transition-colors"
+                  >
+                    <Wrench size={14} /> {variableCounts[item.id] || 0} variabel
+                  </Link>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-4 text-sm font-medium">
-                    <Link
-                      to={`/admin/tables/${tableId}/criteria/${item.id}`}
-                      className="text-[#17203A] cursor-pointer hover:text-[#C8933E] transition-colors"
-                      title="Atur Variabel & Bobot"
-                    >
-                      <Wrench className="w-4 h-4" />
-                    </Link>
-                    <button onClick={() => openEdit(item)} className="text-[#17203A] cursor-pointer hover:text-[#C8933E] transition-colors" title="Edit Kriteria">
+                    <button onClick={() => openEdit(item)} className="text-[#17203A] cursor-pointer hover:text-[#C8933E] transition-colors">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="text-[#C1443A] cursor-pointer hover:text-[#a3372f] transition-colors" title="Hapus Kriteria">
+                    <button onClick={() => handleDelete(item.id)} className="text-[#C1443A] cursor-pointer hover:text-[#a3372f] transition-colors">
                       <Trash className="w-4 h-4" />
                     </button>
                   </div>

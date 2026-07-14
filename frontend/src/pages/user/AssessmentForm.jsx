@@ -190,6 +190,22 @@ export default function AssessmentForm() {
                                   <p className="text-xs text-red-500">Tidak ada level tersedia</p>
                                 ) : (
                                   <div className="flex flex-wrap gap-3">
+                                    <label
+                                      className={`flex items-center gap-2 cursor-pointer rounded-lg border p-3 ${
+                                        selectedLevel === null
+                                          ? 'border-[#C8933E] bg-[#C8933E]/5'
+                                          : 'border-slate-200 hover:border-slate-300'
+                                      }`}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`var-${variable.id}`}
+                                        checked={selectedLevel === null}
+                                        onChange={() => handleLevelChange(variable.id, null)}
+                                        className="mt-0.5 accent-[#C8933E]"
+                                      />
+                                      <span className="text-sm">Tidak ada</span>
+                                    </label>
                                     {availableLevels.map(({ level, description }) => (
                                       <label
                                         key={level}
@@ -213,22 +229,6 @@ export default function AssessmentForm() {
                                         </div>
                                       </label>
                                     ))}
-                                    <label
-                                      className={`flex items-center gap-2 cursor-pointer rounded-lg border p-3 ${
-                                        selectedLevel === null
-                                          ? 'border-[#C8933E] bg-[#C8933E]/5'
-                                          : 'border-slate-200 hover:border-slate-300'
-                                      }`}
-                                    >
-                                      <input
-                                        type="radio"
-                                        name={`var-${variable.id}`}
-                                        checked={selectedLevel === null}
-                                        onChange={() => handleLevelChange(variable.id, null)}
-                                        className="mt-0.5 accent-[#C8933E]"
-                                      />
-                                      <span className="text-sm">Tidak ada</span>
-                                    </label>
                                   </div>
                                 )}
                               </div>

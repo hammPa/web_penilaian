@@ -1,17 +1,23 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, FilePlus2, History, LogOut } from 'lucide-react';
+import { LayoutDashboard, History, LogOut } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/assessment/new', label: 'Penilaian Baru', icon: FilePlus2 },
   { path: '/assessments', label: 'Riwayat', icon: History },
 ];
 
 export default function UserLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const activeLabel = navItems.find(i => i.path === location.pathname)?.label || 'Dashboard';
+  let activeLabel = 'Dashboard';
+  if (location.pathname === '/assessment/new') {
+    activeLabel = 'Form Penilaian';
+  } else if (location.pathname.startsWith('/assessments/')) {
+    activeLabel = 'Detail Penilaian';
+  } else {
+    activeLabel = navItems.find(i => i.path === location.pathname)?.label || 'Dashboard';
+  }
 
   return (
     <div className="flex h-screen bg-[#F3F4F7]">

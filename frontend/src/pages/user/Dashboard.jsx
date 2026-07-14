@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Loading from '../../components/Loading';
 import groupService from '../../services/groupService';
-import { Users, ArrowRight } from 'lucide-react';
+import sessionService from '../../services/sessionService';
+import { Users, ArrowRight, CalendarDays } from 'lucide-react';
 
 export default function UserDashboard() {
   const [groups, setGroups] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [selectedSessionId, setSelectedSessionId] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,13 +22,21 @@ export default function UserDashboard() {
       return;
     }
 
-    groupService
-      .getAll()
-      .then((allGroups) => {
-        // Grup sekarang tahu sendiri milik tim mana (group.teamId),
-        // jadi cukup filter langsung tanpa perlu fetch Team lagi
+    // Fetch data grup dan sesi secara bersamaan
+    Promise.all([
+      groupService.getAll(),
+      sessionService.getAll()
+    ])
+      .then(([allGroups, allSessions]) => {
+        // Filter grup sesuai tim
         const allowedGroups = allGroups.filter((g) => g.teamId === currentUser.teamId);
         setGroups(allowedGroups);
+        
+        // Simpan sesi dan set sesi pertama sebagai default
+        setSessions(allSessions);
+        if (allSessions.length > 0) {
+          setSelectedSessionId(allSessions[0].id);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -35,19 +46,55 @@ export default function UserDashboard() {
 
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-6 p-6 md:-m-8 md:p-8">
-      <header className="mb-8">
-        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">
-          Mulai Baru
-        </p>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
-          Pilih Grup Penilaian
-        </h1>
-        <p className="mt-2 text-sm text-slate-500 max-w-2xl">
-          Berikut adalah daftar grup yang menjadi tanggung jawab tim Anda. Pilih salah satu grup di bawah ini untuk memulai proses penilaian baru.
-        </p>
+      <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">
+            Mulai Baru
+          </p>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
+            Pilih Grup Penilaian
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 max-w-2xl">
+            Berikut adalah daftar grup yang menjadi tanggung jawab tim Anda. Pilih sesi/semester terlebih dahulu, lalu pilih grup untuk memulai.
+          </p>
+        </div>
+
+        {/* Filter Sesi / Semester */}
+        {sessions.length > 0 && (
+          <div className="shrink-0">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              Sesi / Semester
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <CalendarDays className="h-4 w-4 text-slate-400" />
+              </div>
+              <select
+                value={selectedSessionId}
+                onChange={(e) => setSelectedSessionId(e.target.value)}
+                className="pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 font-medium focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none shadow-sm transition-all appearance-none w-full md:w-64 cursor-pointer"
+              >
+                {sessions.map(session => (
+                  <option key={session.id} value={session.id}>
+                    {session.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </header>
 
-      {groups.length === 0 ? (
+      {sessions.length === 0 ? (
+        // Tampilan jika Admin belum membuat Sesi satupun
+        <div className="bg-white p-12 rounded-xl border border-slate-200 text-center shadow-sm">
+          <CalendarDays className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-700">Belum ada sesi aktif</h3>
+          <p className="text-slate-500 text-sm mt-1">
+            Sesi/Semester penilaian belum dikonfigurasi. Silakan hubungi Administrator.
+          </p>
+        </div>
+      ) : groups.length === 0 ? (
         // Tampilan jika Tim tidak punya grup
         <div className="bg-white p-12 rounded-xl border border-slate-200 text-center shadow-sm">
           <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
@@ -62,7 +109,7 @@ export default function UserDashboard() {
           {groups.map(group => (
             <Link
               key={group.id}
-              to={`/assessment/new?groupId=${group.id}`}
+              to={`/assessment/new?groupId=${group.id}&sessionId=${selectedSessionId}`}
               className="group bg-white border border-slate-200 hover:border-[#C8933E] rounded-xl p-6 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full"
             >
               {/* Efek dekorasi cahaya di sudut kanan atas saat di-hover */}

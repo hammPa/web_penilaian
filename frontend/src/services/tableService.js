@@ -1,7 +1,9 @@
 import api from '../api/axiosInstance';
 
-const getAll = async () => {
-  const res = await api.get('/tables');
+const getAll = async (sessionId) => {
+  // Jika parameter sessionId dikirim, tambahkan sebagai query params
+  const config = sessionId ? { params: { sessionId } } : {};
+  const res = await api.get('/tables', config);
   return res.data.data;
 };
 

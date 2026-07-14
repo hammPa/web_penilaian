@@ -4,7 +4,7 @@ import { LayoutDashboard, LayoutGrid, FileCheck2, LogOut, Users, UsersRound, Lay
 
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/admin/tables', label: 'Tabel Penilaian', icon: LayoutGrid },
+  { path: '/admin/sessions', label: 'Tabel Penilaian', icon: LayoutGrid },
   { path: '/admin/groups', label: 'Grup', icon: Layers },
   { path: '/admin/teams', label: 'Tim', icon: UsersRound },
   { path: '/admin/users', label: 'Pengguna', icon: Users },
@@ -14,16 +14,15 @@ const navItems = [
 export default function AdminLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
-  // Aktifkan menu "Tabel Penilaian" juga untuk sub-halaman /admin/tables/...
-  const activeItem = navItems.find(i =>
-    i.path === '/admin/tables'
-      ? location.pathname.startsWith('/admin/tables')
-      : location.pathname === i.path
-  );
+  // Aktifkan menu "Tabel Penilaian" juga untuk sub-halaman /admin/sessions/... dan /admin/tables/...
+  const isActive = (path) => {
+    if (path === '/admin/sessions') {
+      return location.pathname.startsWith('/admin/sessions') || location.pathname.startsWith('/admin/tables');
+    }
+    return location.pathname === path;
+  };
+  const activeItem = navItems.find(i => isActive(i.path));
   const activeLabel = activeItem?.label || 'Admin';
-
-  const isActive = (path) =>
-    path === '/admin/tables' ? location.pathname.startsWith('/admin/tables') : location.pathname === path;
 
   return (
     <div className="flex h-screen bg-[#F3F4F7]">

@@ -1,0 +1,23 @@
+notulensi review web penilaian sga
+need:
+permintaan satukan dengan aplikasi inspectSP (tidak mendesak)
+fitur download data hasil penilaian sebagai back-up
+bikin PWA (progresif web app)
+
+add:
+fitur delete untuk mode table                                                   -> done
+available pilihan "tidak ada", dan pindah pilihan tidak ada ke paling kiri
+hapus kolom                                                                     -> done, tpi rencana tambah yang beneran hapus 1 kolom unutk semua kriteria dari tabel
+tambah foto area untuk dokumentasi(*) dipaling bawah fotonya bebas jumlahnya simpan difolder dulu
+
+priority:
+perbaikan hitungan penilaian sesuai excel yg baru, tiap tabel ada faktor pengali koofisien
+hitungan penilaian satu juri Nor banyak juri di area yg sama
+
+fitur tambahan:
+dashboard
+
+
+
+asssesment bisa banyak
+tanggal tanggal semester
