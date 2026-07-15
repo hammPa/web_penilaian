@@ -5,6 +5,6 @@ frontend/.env
 
 backend/node_modules
 backend/.env
-backend/src/data
+backend/src/data/*
 !backend/src/data/web_penilaian.sqlite
 backend/public/uploads
