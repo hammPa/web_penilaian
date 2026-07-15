@@ -6,19 +6,20 @@ bikin PWA (progresif web app)
 
 add:
 fitur delete untuk mode table                                                   -> done
-available pilihan "tidak ada", dan pindah pilihan tidak ada ke paling kiri
+available pilihan "tidak ada"
+pindah pilihan tidak ada ke paling kiri                                         -> done
 hapus kolom                                                                     -> done, tpi rencana tambah yang beneran hapus 1 kolom unutk semua kriteria dari tabel
 tambah foto area untuk dokumentasi(*) dipaling bawah fotonya bebas jumlahnya simpan difolder dulu  -> done
 
 priority:
 perbaikan hitungan penilaian sesuai excel yg baru, tiap tabel ada faktor pengali koofisien  -> done, but tabel 3 baris 3 agak anomali soalnya nilainya setengah dari sblmnnya jadinya dibuat perbaris ada koefisien
-hitungan penilaian satu juri Nor banyak juri di area yg sama
+hitungan penilaian satu juri Nor banyak juri di area yg sama                                -> done
 
 fitur tambahan:
-dashboard menampilkan juri mana yang sudah menilai grup apa serta nilai tiap grup
+dashboard menampilkan juri mana yang sudah menilai grup apa serta nilai tiap grup   -> blm sepenuhnya gini si
 
 
 
-asssesment bisa banyak                                                          -> 
+asssesment bisa banyak orang                                                    -> done
 tanggal tanggal semester                                                        -> done
 satu grup hanya bisa dinilai sekali oleh satu user yang sama peer semester      -> done

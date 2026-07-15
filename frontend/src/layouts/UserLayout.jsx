@@ -25,7 +25,7 @@ export default function UserLayout() {
       <aside className="hidden md:flex w-64 bg-[#17203A] text-white flex-col">
         <div className="p-5 border-b border-white/10">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Sistem Penilaian</p>
-          <h1 className="font-serif text-xl font-semibold mt-0.5">User Panel</h1>
+          <h1 className="font-serif text-xl font-semibold mt-0.5">Panel Penilai</h1>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">

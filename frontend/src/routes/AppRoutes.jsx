@@ -45,7 +45,7 @@ export default function AppRoutes() {
         <Route path="users" element={<UserList />} />
         <Route path="teams" element={<TeamList />} />
         <Route path="groups" element={<GroupList />} />
-        <Route path="/admin/recap" element={<AssessmentRecap />} />
+        <Route path="recap" element={<AssessmentRecap />} />
       </Route>
 
       {/* User routes */}
