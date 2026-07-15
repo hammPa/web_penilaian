@@ -1,7 +1,7 @@
 notulensi review web penilaian sga
 need:
 permintaan satukan dengan aplikasi inspectSP (tidak mendesak)
-fitur download data hasil penilaian sebagai back-up
+fitur download data hasil penilaian sebagai back-up                             -> done, but csv
 bikin PWA (progresif web app)
 
 add:

@@ -7,7 +7,8 @@ import teamService from '../../services/teamService';
 import assessmentService from '../../services/assessmentService';
 import userService from '../../services/userService';
 import sessionService from '../../services/sessionService';
-import { Calculator, CalendarDays, Shield } from 'lucide-react';
+// Tambahkan icon Download di sini
+import { Calculator, CalendarDays, Shield, Download } from 'lucide-react'; 
 
 export default function AssessmentRecap() {
   const [loading, setLoading] = useState(true);
@@ -73,7 +74,7 @@ export default function AssessmentRecap() {
     });
 
     const totalAllScores = assessorDetails.reduce((sum, current) => sum + current.score, 0);
-    const average = assessorDetails.length > 0 ? (totalAllScores / assessorDetails.length).toFixed(2) : 0;
+    const average = assessorDetails.length > 0 ? (totalAllScores / assessorDetails.length).toFixed(2) : "0.00";
 
     return {
       ...group,
@@ -89,9 +90,64 @@ export default function AssessmentRecap() {
         ? 'bg-[#C8933E]/10 text-[#C8933E]'
         : 'bg-slate-100 text-slate-400';
 
+  // === FUNGSI EXPORT KE CSV / EXCEL ===
+  const handleExportCSV = () => {
+    if (reportData.length === 0) {
+      showToast('Tidak ada data untuk diekspor', 'error');
+      return;
+    }
+
+    // Header Kolom
+    const headers = [
+      'Nama Grup', 'Gugus', 'Tim', 'Sesi/Semester', 
+      'Nama Penilai 1', 'Skor Penilai 1', 
+      'Nama Penilai 2', 'Skor Penilai 2', 
+      'Nama Penilai 3', 'Skor Penilai 3', 
+      'Rata-Rata Akhir'
+    ];
+
+    // Format data per baris
+    const csvRows = reportData.map(data => {
+      const teamName = teams.find(t => t.id === data.teamId)?.name || '-';
+      const sessionName = sessions.find(s => s.id === selectedSessionId)?.name || '-';
+
+      // Ekstrak maksimal 3 penilai
+      const a1 = data.assessors[0] || { name: '-', score: '-' };
+      const a2 = data.assessors[1] || { name: '-', score: '-' };
+      const a3 = data.assessors[2] || { name: '-', score: '-' };
+
+      // Format nilai agar selalu 2 angka di belakang koma (jika bukan string '-')
+      const formatScore = (val) => val !== '-' ? Number(val).toFixed(2) : '-';
+
+      return [
+        `"${data.name}"`, 
+        `"${data.gugus}"`, 
+        `"${teamName}"`, 
+        `"${sessionName}"`,
+        `"${a1.name}"`, `"${formatScore(a1.score)}"`,
+        `"${a2.name}"`, `"${formatScore(a2.score)}"`,
+        `"${a3.name}"`, `"${formatScore(a3.score)}"`,
+        `"${data.average}"`
+      ].join(','); // Gabungkan dengan koma
+    });
+
+    // Gabungkan header dan data
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+
+    // Buat file dan trigger download otomatis
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Rekapitulasi_Nilai_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-4 p-4 sm:-m-6 sm:p-6 md:-m-8 md:p-8">
-      <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
+      <header className="mb-6 md:mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Laporan</p>
           <h1 className="font-serif text-2xl sm:text-3xl font-semibold tracking-tight text-[#17203A]">
@@ -99,7 +155,7 @@ export default function AssessmentRecap() {
           </h1>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 shrink-0 flex-wrap items-end">
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Sesi / Semester</label>
             <div className="relative">
@@ -107,7 +163,7 @@ export default function AssessmentRecap() {
               <select
                 value={selectedSessionId}
                 onChange={(e) => setSelectedSessionId(e.target.value)}
-                className="w-full sm:w-auto pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-[#C8933E] shadow-sm appearance-none sm:min-w-[200px] cursor-pointer"
+                className="w-full sm:w-auto pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-[#C8933E] shadow-sm appearance-none sm:min-w-[160px] cursor-pointer"
               >
                 {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -120,13 +176,22 @@ export default function AssessmentRecap() {
               <select
                 value={selectedTeamId}
                 onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="w-full sm:w-auto pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-[#C8933E] shadow-sm appearance-none sm:min-w-[200px] cursor-pointer"
+                className="w-full sm:w-auto pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-[#C8933E] shadow-sm appearance-none sm:min-w-[160px] cursor-pointer"
               >
                 <option value="all">Semua Tim</option>
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
           </div>
+          
+          {/* Tombol Export */}
+          <button
+            onClick={handleExportCSV}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-[#17203A] text-white rounded-lg text-sm font-medium hover:bg-[#253053] transition-colors shadow-sm"
+          >
+            <Download size={16} />
+            Export Excel
+          </button>
         </div>
       </header>
 
