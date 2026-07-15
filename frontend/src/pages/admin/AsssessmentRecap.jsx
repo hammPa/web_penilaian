@@ -168,7 +168,7 @@ export default function AssessmentRecap() {
                     {data.assessors.map((assessor, idx) => (
                       <li key={idx} className="flex items-center justify-between text-xs">
                         <span className="font-medium text-slate-700">{assessor.name}</span>
-                        <span className="text-slate-400">{assessor.score}</span>
+                        <span className="text-slate-400">{Number(assessor.score).toFixed(2)}</span>
                       </li>
                     ))}
                   </ul>
@@ -215,7 +215,7 @@ export default function AssessmentRecap() {
                             {data.assessors.map((assessor, idx) => (
                               <li key={idx} className="flex items-center gap-2 text-xs">
                                 <span className="font-medium text-slate-700">{assessor.name}</span>
-                                <span className="text-slate-400">({assessor.score})</span>
+                                <span className="text-slate-400">({Number(assessor.score).toFixed(2)})</span>
                               </li>
                             ))}
                           </ul>

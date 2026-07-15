@@ -19,7 +19,7 @@ function ScoreBadge({ percentage }) {
       : 'bg-[#C1443A]/10 text-[#C1443A]';
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>
-      {percentage}%
+      {Number(percentage).toFixed(2)}%
     </span>
   );
 }
@@ -56,13 +56,13 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
         <div className="rounded-lg bg-slate-50 px-4 py-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Total Skor</p>
           <p className="font-serif text-xl font-semibold text-[#17203A]">
-            {total}
-            {maxTotal > 0 && <span className="text-sm font-normal text-slate-400"> / {maxTotal}</span>}
+            {Number(total).toFixed(2)}
+            {maxTotal > 0 && <span className="text-sm font-normal text-slate-400"> / {Number(maxTotal).toFixed(2)}</span>}
           </p>
         </div>
         <div className="rounded-lg bg-slate-50 px-4 py-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Persentase</p>
-          <p className="font-serif text-xl font-semibold text-[#17203A]">{percentage}%</p>
+          <p className="font-serif text-xl font-semibold text-[#17203A]">{Number(percentage).toFixed(2)}%</p>
         </div>
       </div>
 
@@ -201,10 +201,10 @@ export default function AdminAssessments() {
                   {new Date(item.createdAt).toLocaleString('id-ID')}
                 </td>
                 <td className="px-6 py-4 font-serif font-semibold text-[#17203A]">
-                  {item.results.total}
+                  {Number(item.results.total).toFixed(2)}
                   {item.results.percentage > 0 && (
                     <span className="text-sm font-normal text-slate-400">
-                      {' '}/ {Math.round(item.results.total / (item.results.percentage / 100))}
+                      {' '}/ {Number(item.results.total / (item.results.percentage / 100)).toFixed(2)}
                     </span>
                   )}
                 </td>

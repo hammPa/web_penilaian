@@ -158,7 +158,7 @@ export default function AdminDashboard() {
                 <div className="text-left md:text-right bg-slate-50 md:bg-transparent p-3 md:p-0 rounded-lg">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Skor Total</p>
                   <p className="font-serif text-2xl font-bold text-[#C8933E]">
-                    {item.score}
+                    {Number(item.score).toFixed(2)}
                   </p>
                 </div>
               </div>
