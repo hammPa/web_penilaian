@@ -8,7 +8,7 @@ import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import tableService from '../../services/tableService';
 import { useToast } from '../../hooks/useToast';
-import { Eye } from 'lucide-react';
+import { Eye, Image as ImageIcon } from 'lucide-react';
 
 function ScoreBadge({ percentage }) {
   const tone =
@@ -30,6 +30,9 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
 
   // maxTotal diturunkan dari percentage = total / maxTotal * 100
   const maxTotal = percentage > 0 ? Math.round(total / (percentage / 100)) : 0;
+
+  // Base URL untuk file statis (uploads), dipisah dari /api
+  const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
 
   // Kelompokkan jawaban: tabel -> kriteria -> variabel
   const groupedByTable = useMemo(() => {
@@ -65,6 +68,35 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
           <p className="font-serif text-xl font-semibold text-[#17203A]">{Number(percentage).toFixed(2)}%</p>
         </div>
       </div>
+
+      {/* Foto Dokumentasi */}
+      {item.photos && item.photos.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3 text-[#17203A]">
+            <ImageIcon size={16} />
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#C8933E]">
+              Foto Dokumentasi
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {item.photos.map((photoUrl, idx) => (
+              <a
+                key={idx}
+                href={`${baseUrl}${photoUrl}`}
+                target="_blank"
+                rel="noreferrer"
+                className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200 shadow-sm hover:ring-2 hover:ring-[#C8933E] transition-all"
+              >
+                <img
+                  src={`${baseUrl}${photoUrl}`}
+                  alt={`Dokumentasi ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {Object.keys(groupedByTable).length === 0 ? (
         <p className="text-sm text-slate-400">Tidak ada rincian jawaban.</p>

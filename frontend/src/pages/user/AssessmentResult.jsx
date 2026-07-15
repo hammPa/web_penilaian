@@ -162,6 +162,9 @@ export default function AssessmentResult() {
     );
   };
 
+
+  const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
+
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-6 p-6 md:-m-8 md:p-8">
       <div className="flex items-center justify-between mb-6">
@@ -209,18 +212,18 @@ export default function AssessmentResult() {
           <div className="flex flex-wrap gap-4">
             {assessment.photos.map((photoUrl, idx) => (
               <a 
-                key={idx} 
-                href={`http://localhost:5000${photoUrl}`} // Sesuaikan dengan port backend kamu jika perlu
-                target="_blank" 
-                rel="noreferrer"
-                className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-slate-200 shadow-sm group hover:ring-2 hover:ring-[#C8933E] transition-all"
-              >
-                <img 
-                  src={`http://localhost:5000${photoUrl}`} // Sesuaikan dengan port backend kamu jika perlu
-                  alt={`Dokumentasi ${idx + 1}`} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                />
-              </a>
+              key={idx} 
+              href={`${baseUrl}${photoUrl}`}
+              target="_blank" 
+              rel="noreferrer"
+              className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-slate-200 shadow-sm group hover:ring-2 hover:ring-[#C8933E] transition-all"
+            >
+              <img 
+                src={`${baseUrl}${photoUrl}`}
+                alt={`Dokumentasi ${idx + 1}`} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+              />
+            </a>
             ))}
           </div>
         </div>
