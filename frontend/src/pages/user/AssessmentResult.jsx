@@ -7,13 +7,13 @@ import assessmentService from '../../services/assessmentService';
 import variableService from '../../services/variableService';
 import criteriaService from '../../services/criteriaService';
 import tableService from '../../services/tableService';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, ArrowLeft } from 'lucide-react';
 
 function ScoreDial({ percentage = 0, size = 116 }) {
   const angle = Math.min(100, Math.max(0, percentage)) * 3.6;
   return (
     <div
-      className="relative grid place-items-center rounded-full shrink-0"
+      className="relative grid place-items-center rounded-full shrink-0 mx-auto sm:mx-0"
       style={{
         width: size,
         height: size,
@@ -103,12 +103,12 @@ export default function AssessmentResult() {
 
     return (
       <Card key={criteriaId}>
-        {/* Header: judul bisa wrap, subtotal tetap di kanan atas */}
-        <div className="flex items-start justify-between gap-3 mb-1 flex-wrap">
-          <h3 className="font-serif text-lg font-semibold text-[#17203A] break-words flex-1 min-w-0">
+        {/* Header Card: Responsif antara Nama Kriteria & Subtotal */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-3 mb-2">
+          <h3 className="font-serif text-base sm:text-lg font-semibold text-[#17203A] break-words">
             {crit.name}
           </h3>
-          <span className="text-sm text-slate-500 whitespace-nowrap flex-shrink-0">
+          <span className="text-xs sm:text-sm text-slate-500 whitespace-nowrap mt-0.5">
             Subtotal <span className="font-semibold text-[#17203A]">{subtotal}</span>
           </span>
         </div>
@@ -125,35 +125,39 @@ export default function AssessmentResult() {
                 : null;
 
               return (
-                <div key={vid} className="flex items-start justify-between py-2.5 text-sm">
-                  <div className="flex-1 min-w-0 mr-2">
-                    {/* Nama variabel di baris pertama */}
-                    <div className="text-slate-700 font-medium">{variable?.name || vid}</div>
-                    {/* Badge level di baris kedua (bawah) */}
+                <div key={vid} className="flex items-start justify-between py-3 text-sm gap-2">
+                  <div className="flex-1 min-w-0">
+                    {/* Nama variabel */}
+                    <div className="text-slate-700 font-medium text-xs sm:text-sm leading-relaxed">
+                      {variable?.name || vid}
+                    </div>
+                    {/* Badge level: Dibuat break-words agar teks keterangan tidak meluap */}
                     {selectedLevel !== undefined ? (
-                      <div className="mt-1">
-                        <span className="inline-flex items-center gap-1 rounded-xl px-4 py-2 text-xs font-medium bg-[#0F9D6D]/10 text-[#0F9D6D]">
+                      <div className="mt-1.5 flex">
+                        <span className="inline-block rounded-lg px-2.5 py-1 text-xs font-medium bg-[#0F9D6D]/10 text-[#0F9D6D] break-words max-w-full leading-normal">
                           Level {selectedLevel}
-                          {levelDescription && `: ${levelDescription}`}
+                          {levelDescription && <span className="font-normal text-slate-600 block sm:inline sm:ml-1">({levelDescription})</span>}
                         </span>
                       </div>
                     ) : (
-                      <div className="mt-1">
-                        <span className="inline-flex items-center gap-1 rounded-xl px-4 py-2 text-xs font-medium bg-[#C1443A]/10 text-[#C1443A]">
+                      <div className="mt-1.5 flex">
+                        <span className="inline-block rounded-lg px-2.5 py-1 text-xs font-medium bg-[#C1443A]/10 text-[#C1443A]">
                           Tidak dipilih
                         </span>
                       </div>
                     )}
                   </div>
-                  {/* Skor tetap di kanan, sejajar dengan baris pertama */}
-                  <span className="text-slate-400 tabular-nums flex-shrink-0 mt-0.5">{score}</span>
+                  {/* Skor di bagian kanan */}
+                  <span className="text-slate-500 font-semibold tabular-nums text-xs sm:text-sm pt-0.5">
+                    {score}
+                  </span>
                 </div>
               );
             })}
           </div>
         ) : (
           varIds.length > 0 && (
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-[11px] sm:text-xs text-slate-400 mt-2">
               Klik tombol "Lihat Detail" untuk melihat rincian variabel
             </p>
           )
@@ -162,92 +166,94 @@ export default function AssessmentResult() {
     );
   };
 
-
   const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
 
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-6 p-6 md:-m-8 md:p-8">
-      <div className="flex items-center justify-between mb-6">
+      {/* Top Navigation & Header */}
+      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Detail</p>
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
+          <h1 className="font-serif text-2xl sm:text-3xl font-semibold tracking-tight text-[#17203A] mt-0.5">
             Hasil Penilaian
           </h1>
         </div>
         <Link
           to="/assessments"
-          className="text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors self-start sm:self-auto bg-white sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-lg shadow-sm sm:shadow-none border sm:border-none border-slate-200"
         >
-          ← Kembali ke Riwayat
+          <ArrowLeft size={16} /> Kembali
         </Link>
       </div>
 
-      {/* Summary band */}
-      <div className="mb-6 rounded-xl bg-[#17203A] text-white p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
+      {/* Summary Band Card */}
+      <div className="mb-6 rounded-xl bg-[#17203A] text-white p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5 sm:gap-6 shadow-sm text-center sm:text-left">
         <ScoreDial percentage={percentage} />
-        <div className="flex-1 w-full grid grid-cols-2 gap-4">
+        <div className="flex-1 w-full grid grid-cols-2 gap-3 sm:gap-4 pt-3 sm:pt-0 border-t border-white/10 sm:border-none">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">Tanggal</p>
-            <p className="mt-1 font-medium">
-              {new Date(assessment.createdAt).toLocaleString('id-ID')}
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-slate-400">Tanggal</p>
+            <p className="mt-1 text-xs sm:text-sm font-medium leading-tight">
+              {new Date(assessment.createdAt).toLocaleString('id-ID', {
+                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+              })}
             </p>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">Total Nilai</p>
-            <p className="mt-1 font-serif text-2xl font-semibold text-[#C8933E]">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-slate-400">Total Nilai</p>
+            <p className="mt-0.5 font-serif text-xl sm:text-2xl font-semibold text-[#C8933E]">
               {total}
-              {maxTotal > 0 && <span className="text-base font-normal text-slate-400"> / {maxTotal}</span>}
+              {maxTotal > 0 && <span className="text-xs sm:text-base font-normal text-slate-400"> / {maxTotal}</span>}
             </p>
           </div>
         </div>
       </div>
 
-      {/* TAMPILKAN FOTO DOKUMENTASI DI SINI JIKA ADA */}
+      {/* Foto Dokumentasi */}
       {assessment.photos && assessment.photos.length > 0 && (
-        <div className="mb-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 mb-4 text-[#17203A]">
+        <div className="mb-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 text-[#17203A]">
             <ImageIcon size={18} />
-            <h3 className="font-serif text-lg font-semibold">Foto Dokumentasi</h3>
+            <h3 className="font-serif text-base sm:text-lg font-semibold">Foto Dokumentasi</h3>
           </div>
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-3">
             {assessment.photos.map((photoUrl, idx) => (
               <a 
-              key={idx} 
-              href={`${baseUrl}${photoUrl}`}
-              target="_blank" 
-              rel="noreferrer"
-              className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-slate-200 shadow-sm group hover:ring-2 hover:ring-[#C8933E] transition-all"
-            >
-              <img 
-                src={`${baseUrl}${photoUrl}`}
-                alt={`Dokumentasi ${idx + 1}`} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-              />
-            </a>
+                key={idx} 
+                href={`${baseUrl}${photoUrl}`}
+                target="_blank" 
+                rel="noreferrer"
+                className="relative aspect-square sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-slate-200 shadow-sm group hover:ring-2 hover:ring-[#C8933E] transition-all"
+              >
+                <img 
+                  src={`${baseUrl}${photoUrl}`}
+                  alt={`Dokumentasi ${idx + 1}`} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                />
+              </a>
             ))}
           </div>
         </div>
       )}
 
-      {/* Tombol toggle detail */}
-      <div className="mb-6 flex justify-center">
+      {/* Sticky Bottom / Floating Toggle Detail Container */}
+      <div className="mb-6 flex justify-center sticky top-4 z-10 sm:relative sm:top-0">
         <button
           onClick={() => setShowDetail(!showDetail)}
-          className="inline-flex items-center gap-2 rounded-full border border-[#17203A] bg-white px-6 py-2.5 text-sm font-medium text-[#17203A] hover:bg-[#17203A] hover:text-white transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 rounded-full border border-[#17203A] bg-white px-5 py-2 text-xs sm:text-sm font-medium text-[#17203A] hover:bg-[#17203A] hover:text-white transition-colors shadow-md sm:shadow-sm"
         >
           {showDetail ? 'Sembunyikan Detail' : 'Lihat Detail'}
         </button>
       </div>
 
-      {/* Daftar tabel dan kriteria */}
-      <div className="space-y-8">
+      {/* Daftar Tabel & Kriteria */}
+      <div className="space-y-6 sm:space-y-8">
         {groupedTables.map(({ table, criteriaIds }) => (
           <div key={table.id}>
             <div className="mb-3 flex items-center gap-3">
-              <h2 className="font-serif text-xl font-semibold text-[#17203A]">{table.name}</h2>
+              <h2 className="font-serif text-lg sm:text-xl font-semibold text-[#17203A] truncate">{table.name}</h2>
               <span className="h-px flex-1 bg-slate-200" />
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
               {criteriaIds.map(renderCriteriaCard)}
             </div>
           </div>
@@ -256,10 +262,10 @@ export default function AssessmentResult() {
         {orphanCriteriaIds.length > 0 && (
           <div>
             <div className="mb-3 flex items-center gap-3">
-              <h2 className="font-serif text-xl font-semibold text-[#17203A]">Lainnya</h2>
+              <h2 className="font-serif text-lg sm:text-xl font-semibold text-[#17203A]">Lainnya</h2>
               <span className="h-px flex-1 bg-slate-200" />
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
               {orphanCriteriaIds.map(renderCriteriaCard)}
             </div>
           </div>

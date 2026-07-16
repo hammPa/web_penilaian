@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, LayoutGrid, FileCheck2, LogOut, Users, UsersRound, Layers, Calculator } from 'lucide-react';
+import {
+  LayoutDashboard, LayoutGrid, FileCheck2, LogOut, Users,
+  UsersRound, Layers, Calculator, MoreHorizontal, X,
+} from 'lucide-react';
 
 const navItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/admin/sessions', label: 'Tabel Penilaian', icon: LayoutGrid },
+  { path: '/admin/sessions', label: 'Session', icon: LayoutGrid },
   { path: '/admin/groups', label: 'Grup', icon: Layers },
   { path: '/admin/teams', label: 'Tim', icon: UsersRound },
   { path: '/admin/users', label: 'Pengguna', icon: Users },
@@ -12,9 +16,15 @@ const navItems = [
   { path: '/admin/recap', label: 'Rekapitulasi', icon: Calculator },
 ];
 
+// 4 menu yang tampil langsung di tab bar mobile.
+// Sisanya masuk ke sheet "Lainnya". Urutkan sesuai prioritas pemakaian.
+const PRIMARY_MOBILE_PATHS = ['/admin/dashboard', '/admin/sessions', '/admin/groups', '/admin/teams'];
+
 export default function AdminLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const [moreOpen, setMoreOpen] = useState(false);
+
   // Aktifkan menu "Tabel Penilaian" juga untuk sub-halaman /admin/sessions/... dan /admin/tables/...
   const isActive = (path) => {
     if (path === '/admin/sessions') {
@@ -22,8 +32,13 @@ export default function AdminLayout() {
     }
     return location.pathname === path;
   };
+
   const activeItem = navItems.find(i => isActive(i.path));
   const activeLabel = activeItem?.label || 'Admin';
+
+  const primaryItems = navItems.filter(i => PRIMARY_MOBILE_PATHS.includes(i.path));
+  const moreItems = navItems.filter(i => !PRIMARY_MOBILE_PATHS.includes(i.path));
+  const isMoreActive = moreItems.some(i => isActive(i.path));
 
   return (
     <div className="flex h-screen bg-[#F3F4F7]">
@@ -104,16 +119,17 @@ export default function AdminLayout() {
         </main>
       </div>
 
-      {/* Bottom tab bar — mobile only */}
+      {/* Bottom tab bar — mobile only: 4 menu utama + "Lainnya" */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#17203A] border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-stretch justify-around">
-          {navItems.map(item => {
+          {primaryItems.map(item => {
             const active = isActive(item.path);
             const Icon = item.icon;
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => setMoreOpen(false)}
                 className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
                   active ? 'text-[#C8933E]' : 'text-slate-400'
                 }`}
@@ -123,8 +139,66 @@ export default function AdminLayout() {
               </Link>
             );
           })}
+
+          {/* Tombol Lainnya */}
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+              isMoreActive ? 'text-[#C8933E]' : 'text-slate-400'
+            }`}
+          >
+            <MoreHorizontal className="h-5 w-5" strokeWidth={isMoreActive ? 2.5 : 2} />
+            Lainnya
+          </button>
         </div>
       </nav>
+
+      {/* Sheet "Lainnya" — mobile only */}
+      {moreOpen && (
+        <div className="md:hidden fixed inset-0 z-50">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMoreOpen(false)}
+          />
+          {/* Panel */}
+          <div className="absolute bottom-0 inset-x-0 bg-white rounded-t-2xl pb-[env(safe-area-inset-bottom)] animate-[slideUp_0.2s_ease-out]">
+            <div className="flex items-center justify-between px-5 pt-4 pb-2">
+              <h3 className="font-serif text-base font-semibold text-[#17203A]">Menu Lainnya</h3>
+              <button
+                onClick={() => setMoreOpen(false)}
+                aria-label="Tutup"
+                className="p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" strokeWidth={2} />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 px-4 pb-6 pt-2">
+              {moreItems.map(item => {
+                const active = isActive(item.path);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMoreOpen(false)}
+                    className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl text-xs font-medium transition-colors ${
+                      active ? 'bg-[#17203A]/5 text-[#17203A]' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className={`flex items-center justify-center h-11 w-11 rounded-full ${
+                      active ? 'bg-[#C8933E]/15 text-[#C8933E]' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      <Icon className="h-5 w-5" strokeWidth={2} />
+                    </span>
+                    <span className="text-center leading-tight">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

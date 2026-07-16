@@ -102,10 +102,10 @@ export default function SessionList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Master Data</p>
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
+          <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">
             Sesi Assessment
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -114,7 +114,7 @@ export default function SessionList() {
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 bg-[#17203A] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#232f52] transition-colors shadow-sm shrink-0"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#17203A] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#232f52] transition-colors shadow-sm shrink-0"
         >
           <FilePlus2 size={16} /> Buat Assessment Baru
         </button>
@@ -123,46 +123,94 @@ export default function SessionList() {
       {sessions.length === 0 ? (
         <EmptyState message="Belum ada sesi assessment" icon={<Layers />} />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <Table
-            headers={['Nama Sesi', 'Deskripsi', 'Jumlah Tabel', 'Dibuat', 'Aksi']}
-            data={sessions}
-            renderRow={(item) => (
-              <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-6 py-4">
-                  <Link to={`/admin/sessions/${item.id}/tables`} className="font-medium text-[#17203A] hover:text-[#C8933E] transition-colors">
-                    {item.name}
-                  </Link>
-                </td>
-                <td className="px-6 py-4 text-slate-500">{item.description || '-'}</td>
-                <td className="px-6 py-4">
+        <>
+          {/* MOBILE — daftar card, satu kolom */}
+          <div className="md:hidden space-y-3">
+            {sessions.map((item) => (
+              <div key={item.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      to={`/admin/sessions/${item.id}/tables`}
+                      className="font-medium text-[#17203A] text-sm hover:text-[#C8933E] transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                      {item.description || '-'}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => openEdit(item)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg">
+                      <Pencil size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                      <Trash size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
                   <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-[#C8933E]/10 text-[#8a6224]">
                     {tableCounts[item.id] || 0} tabel
                   </span>
-                </td>
-                <td className="px-6 py-4 text-slate-500 text-xs">
-                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID') : '-'}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex gap-4 text-sm font-medium items-center">
-                    <Link
-                      to={`/admin/sessions/${item.id}/tables`}
-                      className="text-[#17203A] hover:text-[#C8933E] transition-colors inline-flex items-center gap-1"
-                    >
-                      Kelola <ArrowRight size={14} />
+                  <span className="text-xs text-slate-400">
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID') : '-'}
+                  </span>
+                </div>
+
+                <Link
+                  to={`/admin/sessions/${item.id}/tables`}
+                  className="mt-3 flex items-center justify-center gap-1 w-full py-2 rounded-lg border border-slate-200 text-[#17203A] text-sm font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Kelola <ArrowRight size={14} />
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP — tabel seperti semula */}
+          <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <Table
+              headers={['Nama Sesi', 'Deskripsi', 'Jumlah Tabel', 'Dibuat', 'Aksi']}
+              data={sessions}
+              renderRow={(item) => (
+                <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="px-6 py-4">
+                    <Link to={`/admin/sessions/${item.id}/tables`} className="font-medium text-[#17203A] hover:text-[#C8933E] transition-colors">
+                      {item.name}
                     </Link>
-                    <button onClick={() => openEdit(item)} className="text-[#17203A] hover:text-[#C8933E] transition-colors">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(item.id)} className="text-[#C1443A] hover:text-[#a3372f] transition-colors">
-                      <Trash className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          />
-        </div>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500">{item.description || '-'}</td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-[#C8933E]/10 text-[#8a6224]">
+                      {tableCounts[item.id] || 0} tabel
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 text-xs">
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID') : '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-4 text-sm font-medium items-center">
+                      <Link
+                        to={`/admin/sessions/${item.id}/tables`}
+                        className="text-[#17203A] hover:text-[#C8933E] transition-colors inline-flex items-center gap-1"
+                      >
+                        Kelola <ArrowRight size={14} />
+                      </Link>
+                      <button onClick={() => openEdit(item)} className="text-[#17203A] hover:text-[#C8933E] transition-colors">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="text-[#C1443A] hover:text-[#a3372f] transition-colors">
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            />
+          </div>
+        </>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Sesi' : 'Buat Assessment Baru'}>

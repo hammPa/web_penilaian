@@ -213,7 +213,7 @@ export default function AdminAssessments() {
     <div>
       <header className="mb-8">
         <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Semua User</p>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">
           Hasil Penilaian
         </h1>
       </header>
@@ -221,40 +221,82 @@ export default function AdminAssessments() {
       {assessments.length === 0 ? (
         <EmptyState message="Belum ada penilaian" />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <Table
-            headers={['ID', 'User ID', 'Tanggal', 'Total', 'Persentase', 'Detail']}
-            data={assessments}
-            renderRow={(item) => (
-              <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id.slice(0, 8)}</td>
-                <td className="px-6 py-4 text-slate-600">{item.userId}</td>
-                <td className="px-6 py-4 text-slate-600">
-                  {new Date(item.createdAt).toLocaleString('id-ID')}
-                </td>
-                <td className="px-6 py-4 font-serif font-semibold text-[#17203A]">
-                  {Number(item.results.total).toFixed(2)}
-                  {item.results.percentage > 0 && (
-                    <span className="text-sm font-normal text-slate-400">
-                      {' '}/ {Number(item.results.total / (item.results.percentage / 100)).toFixed(2)}
-                    </span>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <ScoreBadge percentage={item.results.percentage} />
-                </td>
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => setSelected(item)}
-                    className="inline-flex items-center gap-1.5 text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
-                  >
-                    <Eye size={16} /> Lihat
-                  </button>
-                </td>
-              </tr>
-            )}
-          />
-        </div>
+        <>
+          {/* MOBILE — daftar card, satu kolom */}
+          <div className="md:hidden space-y-3">
+            {assessments.map((item) => {
+              const maxTotal = item.results.percentage > 0
+                ? Number(item.results.total / (item.results.percentage / 100)).toFixed(2)
+                : null;
+              return (
+                <div key={item.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-mono text-[11px] text-slate-400">{item.id.slice(0, 8)}</p>
+                      <p className="text-sm font-medium text-slate-700 mt-0.5 truncate">User: {item.userId}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <ScoreBadge percentage={item.results.percentage} />
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Total Skor</p>
+                      <p className="font-serif text-lg font-semibold text-[#17203A]">
+                        {Number(item.results.total).toFixed(2)}
+                        {maxTotal && <span className="text-xs font-normal text-slate-400"> / {maxTotal}</span>}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelected(item)}
+                      className="inline-flex items-center gap-1.5 text-sm text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
+                    >
+                      <Eye size={16} /> Lihat
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* DESKTOP — tabel seperti semula */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <Table
+              headers={['ID', 'User ID', 'Tanggal', 'Total', 'Persentase', 'Detail']}
+              data={assessments}
+              renderRow={(item) => (
+                <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id.slice(0, 8)}</td>
+                  <td className="px-6 py-4 text-slate-600">{item.userId}</td>
+                  <td className="px-6 py-4 text-slate-600">
+                    {new Date(item.createdAt).toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-6 py-4 font-serif font-semibold text-[#17203A]">
+                    {Number(item.results.total).toFixed(2)}
+                    {item.results.percentage > 0 && (
+                      <span className="text-sm font-normal text-slate-400">
+                        {' '}/ {Number(item.results.total / (item.results.percentage / 100)).toFixed(2)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <ScoreBadge percentage={item.results.percentage} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() => setSelected(item)}
+                      className="inline-flex items-center gap-1.5 text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
+                    >
+                      <Eye size={16} /> Lihat
+                    </button>
+                  </td>
+                </tr>
+              )}
+            />
+          </div>
+        </>
       )}
 
       <Modal

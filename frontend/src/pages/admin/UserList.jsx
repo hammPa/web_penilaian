@@ -102,16 +102,16 @@ export default function UserList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Manajemen Akun</p>
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
+          <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">
             Daftar Pengguna
           </h1>
         </div>
         <button
           onClick={openCreate}
-          className="bg-[#17203A] cursor-pointer hover:bg-[#232f52] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+          className="w-full sm:w-auto bg-[#17203A] cursor-pointer hover:bg-[#232f52] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
         >
           + Tambah Pengguna
         </button>
@@ -120,45 +120,80 @@ export default function UserList() {
       {users.length === 0 ? (
         <EmptyState message="Belum ada data pengguna" icon={<Users />} />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-              <tr>
-                <th className="px-6 py-4">Nama Lengkap</th>
-                <th className="px-6 py-4">Username</th>
-                <th className="px-6 py-4">Peran (Role)</th>
-                <th className="px-6 py-4">Tim</th>
-                <th className="px-6 py-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-800">{user.name}</td>
-                  <td className="px-6 py-4 text-slate-600">@{user.username}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      user.role === 'admin' ? 'bg-[#C8933E]/10 text-[#C8933E]' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {user.role.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">
-                    {teams.find(t => t.id === user.teamId)?.name || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-right flex justify-end gap-2">
+        <>
+          {/* MOBILE — daftar card, satu kolom */}
+          <div className="md:hidden space-y-3">
+            {users.map((user) => (
+              <div key={user.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-slate-800 text-sm truncate">{user.name}</h3>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">@{user.username}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
                     <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg transition-colors">
                       <Edit2 size={16} />
                     </button>
                     <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                       <Trash2 size={16} />
                     </button>
-                  </td>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    user.role === 'admin' ? 'bg-[#C8933E]/10 text-[#C8933E]' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {user.role.toUpperCase()}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {teams.find(t => t.id === user.teamId)?.name || 'Tanpa tim'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP — tabel seperti semula */}
+          <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                <tr>
+                  <th className="px-6 py-4">Nama Lengkap</th>
+                  <th className="px-6 py-4">Username</th>
+                  <th className="px-6 py-4">Peran (Role)</th>
+                  <th className="px-6 py-4">Tim</th>
+                  <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-800">{user.name}</td>
+                    <td className="px-6 py-4 text-slate-600">@{user.username}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        user.role === 'admin' ? 'bg-[#C8933E]/10 text-[#C8933E]' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {user.role.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 font-medium">
+                      {teams.find(t => t.id === user.teamId)?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg transition-colors">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Pengguna' : 'Tambah Pengguna'}>

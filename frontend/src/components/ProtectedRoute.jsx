@@ -7,7 +7,10 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
   if (loading) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
+
+  // Admin yang nyasar ke rute user -> lempar ke panel admin
   if (adminOnly && user.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (!adminOnly && user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
 
   return children;
 }

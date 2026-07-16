@@ -98,16 +98,16 @@ export default function AdminDashboard() {
       </header>
 
       {/* CARD STATISTIK */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6">
         {statConfig.map(({ key, label, icon }) => (
-          <Card key={key}>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl bg-[#C8933E]/10 text-[#C8933E]">
+          <Card key={key} className="p-4 md:p-6">
+            <div className="flex flex-col items-center text-center gap-2 md:flex-row md:items-center md:text-left md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center text-xl md:text-2xl bg-[#C8933E]/10 text-[#C8933E]">
                 {icon}
               </div>
               <div>
-                <p className="text-sm text-slate-500">{label}</p>
-                <p className="font-serif text-2xl font-semibold text-[#17203A]">
+                <p className="text-xs md:text-sm text-slate-500">{label}</p>
+                <p className="font-serif text-xl md:text-2xl font-semibold text-[#17203A]">
                   {stats?.[key]}
                 </p>
               </div>
@@ -117,8 +117,8 @@ export default function AdminDashboard() {
       </div>
 
       {/* DAFTAR AKTIVITAS TERBARU */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
+      <Card className="p-4 md:p-6">
+        <div className="flex items-center justify-between mb-3 md:mb-4">
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
             5 Penilaian Terbaru
           </p>
@@ -127,22 +127,33 @@ export default function AdminDashboard() {
         {stats?.recentAssessments && stats.recentAssessments.length > 0 ? (
           <div className="divide-y divide-slate-100">
             {stats.recentAssessments.map((item) => (
-              <div key={item.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
-                <div className="flex items-start gap-4">
-                  <span className="grid place-items-center h-10 w-10 rounded-full bg-[#0F9D6D]/10 text-[#0F9D6D] shrink-0 mt-0.5">
-                    <FileCheck2 size={20} />
+              <div key={item.id} className="py-3 md:py-4 flex items-center md:items-center justify-between gap-3 md:gap-4 group">
+                <div className="flex items-center md:items-start gap-3 md:gap-4 min-w-0">
+                  <span className="grid place-items-center h-8 w-8 md:h-10 md:w-10 rounded-full bg-[#0F9D6D]/10 text-[#0F9D6D] shrink-0 md:mt-0.5">
+                    <FileCheck2 size={16} className="md:hidden" />
+                    <FileCheck2 size={20} className="hidden md:block" />
                   </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-[#17203A] text-base">{item.groupName}</h3>
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-wider">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <h3 className="font-semibold text-[#17203A] text-sm md:text-base truncate">{item.groupName}</h3>
+                      <span className="hidden md:inline-block px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-wider shrink-0">
                         {item.teamName}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-500 mt-1">
+
+                    {/* Meta ringkas — satu baris, dipotong di mobile */}
+                    <p className="text-xs text-slate-500 mt-0.5 md:hidden truncate">
+                      {item.userName} · {item.teamName} · {new Date(item.createdAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </p>
+
+                    {/* Meta lengkap — desktop saja */}
+                    <p className="hidden md:block text-sm text-slate-500 mt-1">
                       Dinilai oleh <span className="font-medium text-slate-700">{item.userName}</span>
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-1">
+                    <p className="hidden md:block text-[11px] text-slate-400 mt-1">
                       {new Date(item.createdAt).toLocaleString('id-ID', {
                         weekday: 'long', 
                         day: 'numeric', 
@@ -155,9 +166,9 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="text-left md:text-right bg-slate-50 md:bg-transparent p-3 md:p-0 rounded-lg">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Skor Total</p>
-                  <p className="font-serif text-2xl font-bold text-[#C8933E]">
+                <div className="text-right shrink-0 md:bg-transparent md:p-0 rounded-lg">
+                  <p className="hidden md:block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Skor Total</p>
+                  <p className="font-serif text-lg md:text-2xl font-bold text-[#C8933E]">
                     {Number(item.score).toFixed(2)}
                   </p>
                 </div>

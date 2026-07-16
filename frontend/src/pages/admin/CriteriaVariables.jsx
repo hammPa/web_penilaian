@@ -205,31 +205,39 @@ export default function CriteriaVariables() {
 
           <div className="space-y-3">
             {form.variables.map((v, idx) => (
-              <div key={idx} className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-12 h-10 flex items-center justify-center bg-[#17203A] text-white font-bold rounded-lg shadow-sm">
-                  {idx}
+              <div
+                key={idx}
+                className="bg-white border border-slate-200 rounded-xl p-3 sm:p-0 sm:border-0 sm:bg-transparent"
+              >
+                <div className="flex items-center gap-3 sm:items-start">
+                  <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-10 flex items-center justify-center bg-[#17203A] text-white font-bold rounded-lg shadow-sm text-sm">
+                    {idx}
+                  </div>
+
+                  <textarea
+                    value={v.description}
+                    onChange={e => {
+                      const newVars = [...form.variables];
+                      newVars[idx] = { description: e.target.value };
+                      setForm({ ...form, variables: newVars });
+                    }}
+                    placeholder={`Masukkan deskripsi untuk skor ${idx}...`}
+                    className={`${inputClass} min-h-[44px] resize-y py-2.5 flex-1`}
+                    rows="2"
+                  />
+
+                  {form.variables.length > MIN_LEVEL_COUNT && idx === form.variables.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={removeColumn}
+                      className="shrink-0 p-2 -m-2 sm:mt-1.5 sm:m-0 text-slate-300 hover:text-[#C1443A] active:text-[#C1443A] transition-colors rounded-lg"
+                      title="Hapus kolom skor tertinggi ini"
+                      aria-label="Hapus kolom skor tertinggi ini"
+                    >
+                      <Minus size={18} />
+                    </button>
+                  )}
                 </div>
-                <textarea
-                  value={v.description}
-                  onChange={e => {
-                    const newVars = [...form.variables];
-                    newVars[idx] = { description: e.target.value };
-                    setForm({ ...form, variables: newVars });
-                  }}
-                  placeholder={`Masukkan deskripsi untuk skor ${idx}...`}
-                  className={`${inputClass} min-h-[44px] resize-y py-2.5`}
-                  rows="2"
-                />
-                {form.variables.length > MIN_LEVEL_COUNT && idx === form.variables.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={removeColumn}
-                    className="shrink-0 mt-1.5 text-slate-300 hover:text-[#C1443A] transition-colors"
-                    title="Hapus kolom skor tertinggi ini"
-                  >
-                    <Minus size={16} />
-                  </button>
-                )}
               </div>
             ))}
           </div>

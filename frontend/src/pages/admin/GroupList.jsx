@@ -91,12 +91,15 @@ export default function GroupList() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Master Data</p>
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">Daftar Grup</h1>
+          <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">Daftar Grup</h1>
         </div>
-        <button onClick={openCreate} className="bg-[#17203A] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#232f52] transition-colors">
+        <button
+          onClick={openCreate}
+          className="w-full sm:w-auto bg-[#17203A] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#232f52] transition-colors"
+        >
           + Tambah Grup
         </button>
       </div>
@@ -104,39 +107,73 @@ export default function GroupList() {
       {groups.length === 0 ? (
         <EmptyState message="Belum ada data grup" icon={<Users />} />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
-              <tr>
-                <th className="px-6 py-4">Nama Grup</th>
-                <th className="px-6 py-4">Gugus</th>
-                <th className="px-6 py-4">Tim</th>
-                <th className="px-6 py-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {groups.map((group) => (
-                <tr key={group.id} className="hover:bg-slate-50/50">
-                  <td className="px-6 py-4 font-medium">{group.name}</td>
-                  <td className="px-6 py-4 text-slate-600">{group.gugus}</td>
-                  <td className="px-6 py-4">
-                    {group.teamId ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#C8933E]/10 text-[#8a6224]">
-                        {getTeamName(group.teamId)}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 italic text-xs">Belum ada tim</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right flex justify-end gap-2">
-                    <button onClick={() => openEdit(group)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(group.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
-                  </td>
+        <>
+          {/* MOBILE — daftar card, satu kolom */}
+          <div className="md:hidden space-y-3">
+            {groups.map((group) => (
+              <div key={group.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-[#17203A] text-sm truncate">{group.name}</h3>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">{group.gugus}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => openEdit(group)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg">
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(group.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  {group.teamId ? (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#C8933E]/10 text-[#8a6224]">
+                      {getTeamName(group.teamId)}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 italic text-xs">Belum ada tim</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP — tabel seperti semula */}
+          <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                <tr>
+                  <th className="px-6 py-4">Nama Grup</th>
+                  <th className="px-6 py-4">Gugus</th>
+                  <th className="px-6 py-4">Tim</th>
+                  <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {groups.map((group) => (
+                  <tr key={group.id} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 font-medium">{group.name}</td>
+                    <td className="px-6 py-4 text-slate-600">{group.gugus}</td>
+                    <td className="px-6 py-4">
+                      {group.teamId ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#C8933E]/10 text-[#8a6224]">
+                          {getTeamName(group.teamId)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic text-xs">Belum ada tim</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <button onClick={() => openEdit(group)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(group.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Grup' : 'Tambah Grup'}>
