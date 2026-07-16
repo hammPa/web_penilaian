@@ -24,6 +24,13 @@ class AuthService {
   verifyToken(token) {
     return jwt.verify(token, JWT_SECRET);
   }
+
+  async getUserById(id) {
+    const user = userRepository.findById(id); // lihat poin 4
+    if (!user) return null;
+    const { password, ...safeUser } = user; // jangan kirim password ke client
+    return safeUser;
+  }
 }
 
 module.exports = new AuthService();
