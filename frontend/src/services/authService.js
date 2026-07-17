@@ -9,3 +9,11 @@ export const getMe = async () => {
   const response = await api.get('/auth/me');
   return response.data;
 };
+
+export const logout = async () => {
+  try {
+    await api.post('/auth/logout');
+  } catch (error) {
+    console.error("Gagal memanggil API logout:", error);
+  }
+};

@@ -21,6 +21,8 @@ class AuthService {
       { expiresIn: '24h' }
     );
 
+    userRepository.update(user.id, { activeToken: token });
+
     return {
       token,
       user: { id: user.id, name: user.name, username: user.username, role: user.role, teamId: user.teamId }
@@ -34,7 +36,7 @@ class AuthService {
   async getUserById(id) {
     const user = userRepository.findById(id);
     if (!user) return null;
-    const { password, ...safeUser } = user;
+    const { password, activeToken, ...safeUser } = user;
     return safeUser;
   }
 }
