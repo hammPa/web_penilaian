@@ -30,6 +30,21 @@ class AssessmentController {
       next(err);
     }
   }
+
+  async update(req, res, next) {
+    try {
+      const { selections, photos } = req.body;
+      const assessment = await assessmentService.update(
+        req.params.id,
+        req.user.id,
+        req.user.role,
+        { selections, photos }
+      );
+      success(res, assessment, 'Penilaian berhasil diperbarui');
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new AssessmentController();

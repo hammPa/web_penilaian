@@ -21,6 +21,7 @@ import AssessmentForm from '../pages/user/AssessmentForm';
 import AssessmentResult from '../pages/user/AssessmentResult';
 import AssessmentHistory from '../pages/user/AssessmentHistory';
 import AssessmentRecap from '../pages/admin/AsssessmentRecap';
+import AssessmentEdit from '../pages/user/AssessmentEdit';
 
 export default function AppRoutes() {
   return (
@@ -62,6 +63,7 @@ export default function AppRoutes() {
         <Route path="assessment/new" element={<AssessmentForm />} />
         <Route path="assessments" element={<AssessmentHistory />} />
         <Route path="assessments/:id" element={<AssessmentResult />} />
+        <Route path="/assessments/:id/edit" element={<AssessmentEdit />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />

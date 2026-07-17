@@ -15,4 +15,9 @@ const getById = async (id) => {
   return res.data.data;
 };
 
-export default { create, getAll, getById };
+const update = async (id, selections, photos) => {
+  const res = await api.put(`/assessments/${id}`, { selections, photos });
+  return res.data.data;
+};
+
+export default { create, getAll, getById, update };

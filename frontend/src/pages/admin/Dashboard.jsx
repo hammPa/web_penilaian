@@ -168,7 +168,8 @@ export default function AdminDashboard() {
       lengkapList,
       belumLengkapList,
       belumIsiList,
-      totalAssessmentFiltered: filteredAssessments.length
+      totalAssessmentFiltered: filteredAssessments.length,
+      totalParticipants: lengkapList.length + belumLengkapList.length + belumIsiList.length
     };
   }, [rawData, selectedSession]);
 
@@ -226,27 +227,45 @@ export default function AdminDashboard() {
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400 mb-4">
             Status Pengisian Peserta
           </p>
-          <div className="h-64 w-full flex items-center justify-center">
+          <div className="h-64 w-full flex items-center justify-center relative">
             {processedData?.pieData.some(d => d.value > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={processedData.pieData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={60}
-                    outerRadius={85}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {processedData.pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} User`, 'Jumlah']} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={processedData.pieData}
+                      cx="50%"
+                      cy="45%"
+                      innerRadius={60}
+                      outerRadius={85}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {processedData.pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} User`, 'Jumlah']} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* 1. Overlay Persentase: Pas di tengah lingkaran */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-[10%]">
+                  <p className="font-serif text-3xl font-bold text-[#17203A] leading-none">
+                    {processedData.totalParticipants > 0
+                      ? Math.round((processedData.lengkapList.length / processedData.totalParticipants) * 100)
+                      : 0}%
+                  </p>
+                </div>
+
+                {/* 2. Overlay Teks Pecahan: Di luar lingkaran, di atas legend */}
+                <div className="absolute inset-x-0 bottom-[40px] flex items-center justify-center pointer-events-none">
+                  <p className="text-xs font-medium text-slate-500">
+                    {processedData.lengkapList.length} / {processedData.totalParticipants} Selesai
+                  </p>
+                </div>
+              </>
             ) : (
               <p className="text-xs text-slate-400">Tidak ada aktivitas pada sesi ini</p>
             )}

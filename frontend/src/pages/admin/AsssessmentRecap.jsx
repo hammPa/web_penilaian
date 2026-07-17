@@ -7,8 +7,11 @@ import teamService from '../../services/teamService';
 import assessmentService from '../../services/assessmentService';
 import userService from '../../services/userService';
 import sessionService from '../../services/sessionService';
-// Tambahkan icon Download di sini
-import { Calculator, CalendarDays, Shield, Download } from 'lucide-react'; 
+import tableService from '../../services/tableService';
+import criteriaService from '../../services/criteriaService';
+import variableService from '../../services/variableService';
+import { Calculator, CalendarDays, Shield, Download } from 'lucide-react';
+import { rekapNilai } from './utils/rekapNilaiExport';
 
 export default function AssessmentRecap() {
   const [loading, setLoading] = useState(true);
@@ -19,6 +22,9 @@ export default function AssessmentRecap() {
   const [groups, setGroups] = useState([]);
   const [assessments, setAssessments] = useState([]);
   const [users, setUsers] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [criteria, setCriteria] = useState([]);
+  const [variables, setVariables] = useState([]);
 
   // Filter States: Default ke 'all'
   const [selectedSessionId, setSelectedSessionId] = useState('');
@@ -27,12 +33,15 @@ export default function AssessmentRecap() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sessData, teamData, groupData, assessData, userData] = await Promise.all([
+        const [sessData, teamData, groupData, assessData, userData, tableData, criteriaData, variableData] = await Promise.all([
           sessionService.getAll(),
           teamService.getAll(),
           groupService.getAll(),
           assessmentService.getAll(),
-          userService.getAll()
+          userService.getAll(),
+          tableService.getAll(),
+          criteriaService.getAll(),
+          variableService.getAll()
         ]);
 
         setSessions(sessData);
@@ -40,6 +49,9 @@ export default function AssessmentRecap() {
         setGroups(groupData);
         setAssessments(assessData);
         setUsers(userData);
+        setTables(tableData);
+        setCriteria(criteriaData);
+        setVariables(variableData);
 
         if (sessData.length > 0) setSelectedSessionId(sessData[0].id);
         setSelectedTeamId('all');
@@ -54,6 +66,16 @@ export default function AssessmentRecap() {
 
   if (loading) return <Loading />;
 
+  // Map bantu untuk lookup cepat nama tabel/kriteria/variabel dari id
+  const tableMap = {};
+  tables.forEach(t => { tableMap[t.id] = t; });
+
+  const criteriaMap = {};
+  criteria.forEach(c => { criteriaMap[c.id] = c; });
+
+  const variableMap = {};
+  variables.forEach(v => { variableMap[v.id] = v; });
+
   // Logika Filter: Jika 'all' maka tampilkan semua grup, jika tidak filter berdasarkan teamId
   const filteredGroups = selectedTeamId === 'all'
     ? groups
@@ -67,9 +89,48 @@ export default function AssessmentRecap() {
 
     const assessorDetails = groupAssessments.map(a => {
       const u = users.find(user => user.id === a.userId);
+      const subtotals = a.results?.subtotals || {};
+      const details = a.results?.details || [];
+
+      // Breakdown per kriteria
+      const perCriteria = Object.entries(subtotals).map(([criteriaId, score]) => {
+        const crit = criteriaMap[criteriaId];
+        const table = crit ? tableMap[crit.tableId] : null;
+        return {
+          tableName: table?.name || 'Tabel Tidak Diketahui',
+          criteriaName: crit?.name || 'Kriteria Tidak Diketahui',
+          score
+        };
+      });
+
+      // Breakdown per tabel
+      const perTableMap = {};
+      perCriteria.forEach(c => {
+        if (!perTableMap[c.tableName]) perTableMap[c.tableName] = 0;
+        perTableMap[c.tableName] += c.score;
+      });
+      const perTable = Object.entries(perTableMap).map(([tableName, score]) => ({ tableName, score }));
+
+      // Breakdown per variabel
+      const perVariable = details.map(d => {
+        const variable = variableMap[d.variableId];
+        const crit = variable ? criteriaMap[variable.criteriaId] : null;
+        const table = crit ? tableMap[crit.tableId] : null;
+        return {
+          tableName: table?.name || 'Tabel Tidak Diketahui',
+          criteriaName: crit?.name || 'Kriteria Tidak Diketahui',
+          variableName: variable?.name || 'Variabel Tidak Diketahui',
+          level: d.level,
+          score: d.score
+        };
+      });
+
       return {
         name: u?.name || 'Unknown',
-        score: a.results?.total || 0
+        score: a.results?.total || 0,
+        perTable,
+        perCriteria,
+        perVariable
       };
     });
 
@@ -90,59 +151,17 @@ export default function AssessmentRecap() {
         ? 'bg-[#C8933E]/10 text-[#C8933E]'
         : 'bg-slate-100 text-slate-400';
 
-  // === FUNGSI EXPORT KE CSV / EXCEL ===
-  const handleExportCSV = () => {
-    if (reportData.length === 0) {
-      showToast('Tidak ada data untuk diekspor', 'error');
-      return;
-    }
-
-    // Header Kolom
-    const headers = [
-      'Nama Grup', 'Gugus', 'Tim', 'Sesi/Semester', 
-      'Nama Penilai 1', 'Skor Penilai 1', 
-      'Nama Penilai 2', 'Skor Penilai 2', 
-      'Nama Penilai 3', 'Skor Penilai 3', 
-      'Rata-Rata Akhir'
-    ];
-
-    // Format data per baris
-    const csvRows = reportData.map(data => {
-      const teamName = teams.find(t => t.id === data.teamId)?.name || '-';
-      const sessionName = sessions.find(s => s.id === selectedSessionId)?.name || '-';
-
-      // Ekstrak maksimal 3 penilai
-      const a1 = data.assessors[0] || { name: '-', score: '-' };
-      const a2 = data.assessors[1] || { name: '-', score: '-' };
-      const a3 = data.assessors[2] || { name: '-', score: '-' };
-
-      // Format nilai agar selalu 2 angka di belakang koma (jika bukan string '-')
-      const formatScore = (val) => val !== '-' ? Number(val).toFixed(2) : '-';
-
-      return [
-        `"${data.name}"`, 
-        `"${data.gugus}"`, 
-        `"${teamName}"`, 
-        `"${sessionName}"`,
-        `"${a1.name}"`, `"${formatScore(a1.score)}"`,
-        `"${a2.name}"`, `"${formatScore(a2.score)}"`,
-        `"${a3.name}"`, `"${formatScore(a3.score)}"`,
-        `"${data.average}"`
-      ].join(','); // Gabungkan dengan koma
+  // Memanggil fungsi export dari file helper
+  const handleExportXLSX = () => {
+    rekapNilai({
+      reportData,
+      sessions,
+      selectedSessionId,
+      tables,
+      criteria,
+      teams,
+      showToast
     });
-
-    // Gabungkan header dan data
-    const csvString = [headers.join(','), ...csvRows].join('\n');
-
-    // Buat file dan trigger download otomatis
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Rekapitulasi_Nilai_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
@@ -185,7 +204,7 @@ export default function AssessmentRecap() {
           </div>
 
           <button
-            onClick={handleExportCSV}
+            onClick={handleExportXLSX}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-[#17203A] text-white rounded-lg text-sm font-medium hover:bg-[#253053] transition-colors shadow-sm"
           >
             <Download size={16} />
@@ -241,7 +260,7 @@ export default function AssessmentRecap() {
             ))}
           </div>
 
-          {/* DESKTOP: table (md ke atas), dengan scroll horizontal sebagai pengaman */}
+          {/* DESKTOP: table (md ke atas) */}
           <div className="hidden md:block bg-white border border-slate-200 rounded-xl shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm min-w-[760px]">

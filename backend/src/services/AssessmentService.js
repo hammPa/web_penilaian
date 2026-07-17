@@ -7,6 +7,86 @@ const userRepository = require('../repositories/UserRepository');
 const { evaluateFormula } = require('../utils/evaluator');
 
 class AssessmentService {
+  // Helper baru: hitung hasil (results) dari selections, dibatasi ke variabel milik sessionId
+  _calculateResults(sessionId, selections) {
+    const sessionTables = tableRepository.findBySessionId(sessionId);
+    const sessionTableIds = new Set(sessionTables.map(t => t.id));
+
+    const sessionCriteria = criteriaRepository
+      .findAll()
+      .filter(c => sessionTableIds.has(c.tableId));
+    const sessionCriteriaIds = new Set(sessionCriteria.map(c => c.id));
+
+    const allVariables = variableRepository
+      .findAll()
+      .filter(v => sessionCriteriaIds.has(v.criteriaId));
+
+    const criteriaMap = {};
+    allVariables.forEach(v => {
+      if (!criteriaMap[v.criteriaId]) criteriaMap[v.criteriaId] = [];
+      criteriaMap[v.criteriaId].push(v);
+    });
+
+    const variableScores = {};
+    const subtotals = {};
+    const details = [];
+
+    const selectionMap = {};
+    selections.forEach(s => {
+      selectionMap[s.variableId] = s.selectedLevel;
+    });
+
+    let total = 0;
+
+    for (const [criteriaId, variables] of Object.entries(criteriaMap)) {
+      let subtotal = 0;
+      variables.forEach(variable => {
+        const variableId = variable.id;
+        const selectedLevel = selectionMap[variableId] !== undefined ? selectionMap[variableId] : null;
+        if (selectedLevel !== null) {
+          const skor = selectedLevel;
+          const bobot = variable.weight;
+          const score = evaluateFormula(variable.formula, { bobot, skor });
+          variableScores[variableId] = score;
+          subtotal += score;
+          details.push({ variableId, level: selectedLevel, score });
+        }
+      });
+      if (variables.length > 0) {
+        subtotals[criteriaId] = subtotal;
+        total += subtotal;
+      }
+    }
+
+    let maxTotal = 0;
+    for (const [criteriaId, variables] of Object.entries(criteriaMap)) {
+      variables.forEach(variable => {
+        const bobot = variable.weight;
+        const levelList = variable.variables || variable.levels || [];
+        const availableLevels = levelList
+          .map((level, index) => ({ index, desc: level?.description || '' }))
+          .filter(item => {
+            const desc = item.desc.trim();
+            return desc !== '' && desc !== '-';
+          });
+        const maxSkor = availableLevels.length > 0
+          ? Math.max(...availableLevels.map(l => l.index))
+          : 0;
+        const maxScore = evaluateFormula(variable.formula, { bobot, skor: maxSkor });
+        maxTotal += maxScore;
+      });
+    }
+    const percentage = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+
+    return {
+      variableScores,
+      subtotals,
+      total,
+      percentage: Math.round(percentage * 100) / 100,
+      details
+    };
+  }
+
   async create(userId, groupId, sessionId, selections, photos = []) {
     if (!groupId || !sessionId) {
       throw { status: 400, message: 'Grup dan Sesi wajib disertakan' };
@@ -24,86 +104,7 @@ class AssessmentService {
       throw { status: 400, message: 'Grup ini sudah Anda nilai pada semester/sesi tersebut.' };
     }
 
-    // batasi variabel & kriteria hanya milik SESI ini
-    // (Tabel -> Kriteria -> Variabel). Tanpa ini, variabel/kriteria dari
-    // sesi lain ikut terhitung
-    const sessionTables = tableRepository.findBySessionId(sessionId);
-    const sessionTableIds = new Set(sessionTables.map(t => t.id));
-
-    const sessionCriteria = criteriaRepository
-      .findAll()
-      .filter(c => sessionTableIds.has(c.tableId));
-    const sessionCriteriaIds = new Set(sessionCriteria.map(c => c.id));
-
-    const allVariables = variableRepository
-      .findAll()
-      .filter(v => sessionCriteriaIds.has(v.criteriaId));
-
-    const variableMap = {};
-    allVariables.forEach(v => { variableMap[v.id] = v; });
-
-    const criteriaMap = {};
-    allVariables.forEach(v => {
-      if (!criteriaMap[v.criteriaId]) criteriaMap[v.criteriaId] = [];
-      criteriaMap[v.criteriaId].push(v);
-    });
-
-    const variableScores = {};
-    const subtotals = {};
-    const details = [];
-
-    const selectionMap = {};
-    selections.forEach(s => {
-      selectionMap[s.variableId] = s.selectedLevel; // level 0-5
-    });
-
-    let total = 0;
-
-    for (const [criteriaId, variables] of Object.entries(criteriaMap)) {
-      let subtotal = 0;
-      variables.forEach(variable => {
-        const variableId = variable.id;
-        const selectedLevel = selectionMap[variableId] !== undefined ? selectionMap[variableId] : null;
-        if (selectedLevel !== null) {
-          const skor = selectedLevel; // 0-5
-          const bobot = variable.weight; // Koefisien per baris
-          const score = evaluateFormula(variable.formula, { bobot, skor }); // Dikalikan sesuai formula
-          variableScores[variableId] = score;
-          subtotal += score;
-          details.push({
-            variableId,
-            level: selectedLevel,
-            score
-          });
-        }
-      });
-      if (variables.length > 0) {
-        subtotals[criteriaId] = subtotal;
-        total += subtotal;
-      }
-    }
-
-    // Hitung maksimum untuk persentase -- juga dibatasi ke variabel sesi ini saja
-    let maxTotal = 0;
-    for (const [criteriaId, variables] of Object.entries(criteriaMap)) {
-      variables.forEach(variable => {
-        const bobot = variable.weight;
-        const levelList = variable.variables || variable.levels || [];
-        const availableLevels = levelList
-              .map((level, index) => ({ index, desc: level?.description || '' }))
-              .filter(item => {
-                const desc = item.desc.trim();
-                return desc !== '' && desc !== '-';
-              });
-        const maxSkor = availableLevels.length > 0
-          ? Math.max(...availableLevels.map(l => l.index))
-          : 0;
-        const maxScore = evaluateFormula(variable.formula, { bobot, skor: maxSkor });
-        maxTotal += maxScore;
-      });
-    }
-    const percentage = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
-    // -------------------------------------------------------------
+    const results = this._calculateResults(sessionId, selections);
 
     const assessment = {
       id: uuidv4(),
@@ -115,17 +116,42 @@ class AssessmentService {
         variableId: s.variableId,
         selectedLevel: s.selectedLevel
       })),
-      photos: photos,
-      results: {
-        variableScores,
-        subtotals,
-        total,
-        percentage: Math.round(percentage * 100) / 100,
-        details
-      }
+      photos,
+      results
     };
 
     return assessmentRepository.create(assessment);
+  }
+
+  // update assessment milik sendiri (atau admin)
+  async update(id, userId, role, { selections, photos }) {
+    const assessment = assessmentRepository.findById(id);
+    if (!assessment) throw { status: 404, message: 'Penilaian tidak ditemukan' };
+
+    if (role !== 'admin' && assessment.userId !== userId) {
+      throw { status: 403, message: 'Akses ditolak' };
+    }
+
+    if (!Array.isArray(selections) || selections.length === 0) {
+      throw { status: 400, message: 'Pilihan tidak boleh kosong' };
+    }
+
+    // groupId & sessionId sengaja TIDAK diubah lewat edit,
+    // supaya tidak bentrok dengan pengecekan "sudah dinilai" punya sesi lain
+    const results = this._calculateResults(assessment.sessionId, selections);
+
+    const updated = {
+      ...assessment,
+      selections: selections.map(s => ({
+        variableId: s.variableId,
+        selectedLevel: s.selectedLevel
+      })),
+      photos: photos !== undefined ? photos : assessment.photos,
+      results,
+      updatedAt: new Date().toISOString()
+    };
+
+    return assessmentRepository.update(id, updated);
   }
 
   getAll(userId, role) {
