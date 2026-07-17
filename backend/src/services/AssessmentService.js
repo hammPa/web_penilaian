@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const assessmentRepository = require('../repositories/AssessmentRepository');
 const variableRepository = require('../repositories/VariableRepository');
 const criteriaRepository = require('../repositories/CriteriaRepository');
+const tableRepository = require('../repositories/TableRepository');
+const userRepository = require('../repositories/UserRepository');
 const { evaluateFormula } = require('../utils/evaluator');
 
 class AssessmentService {
@@ -9,7 +11,7 @@ class AssessmentService {
     if (!groupId || !sessionId) {
       throw { status: 400, message: 'Grup dan Sesi wajib disertakan' };
     }
-    
+
     if (!Array.isArray(selections) || selections.length === 0) {
       throw { status: 400, message: 'Pilihan tidak boleh kosong' };
     }
@@ -22,7 +24,21 @@ class AssessmentService {
       throw { status: 400, message: 'Grup ini sudah Anda nilai pada semester/sesi tersebut.' };
     }
 
-    const allVariables = variableRepository.findAll();
+    // batasi variabel & kriteria hanya milik SESI ini
+    // (Tabel -> Kriteria -> Variabel). Tanpa ini, variabel/kriteria dari
+    // sesi lain ikut terhitung
+    const sessionTables = tableRepository.findBySessionId(sessionId);
+    const sessionTableIds = new Set(sessionTables.map(t => t.id));
+
+    const sessionCriteria = criteriaRepository
+      .findAll()
+      .filter(c => sessionTableIds.has(c.tableId));
+    const sessionCriteriaIds = new Set(sessionCriteria.map(c => c.id));
+
+    const allVariables = variableRepository
+      .findAll()
+      .filter(v => sessionCriteriaIds.has(v.criteriaId));
+
     const variableMap = {};
     allVariables.forEach(v => { variableMap[v.id] = v; });
 
@@ -34,7 +50,7 @@ class AssessmentService {
 
     const variableScores = {};
     const subtotals = {};
-    const details = []; 
+    const details = [];
 
     const selectionMap = {};
     selections.forEach(s => {
@@ -67,7 +83,7 @@ class AssessmentService {
       }
     }
 
-    // Hitung maksimum untuk persentase
+    // Hitung maksimum untuk persentase -- juga dibatasi ke variabel sesi ini saja
     let maxTotal = 0;
     for (const [criteriaId, variables] of Object.entries(criteriaMap)) {
       variables.forEach(variable => {
@@ -79,9 +95,9 @@ class AssessmentService {
                 const desc = item.desc.trim();
                 return desc !== '' && desc !== '-';
               });
-        const maxSkor = availableLevels.length > 0 
-          ? Math.max(...availableLevels.map(l => l.index)) 
-          : 0; 
+        const maxSkor = availableLevels.length > 0
+          ? Math.max(...availableLevels.map(l => l.index))
+          : 0;
         const maxScore = evaluateFormula(variable.formula, { bobot, skor: maxSkor });
         maxTotal += maxScore;
       });
@@ -114,8 +130,19 @@ class AssessmentService {
 
   getAll(userId, role) {
     const all = assessmentRepository.findAll();
-    if (role === 'admin') return all;
-    return all.filter(a => a.userId === userId);
+    const users = userRepository.findAll();
+
+    // map id -> name agar proses pencarian cepat & efisien
+    const userMap = {};
+    users.forEach(u => { userMap[u.id] = u.name || 'No Name'; });
+
+    const assessmentsWithUser = all.map(a => ({
+      ...a,
+      name: userMap[a.userId] || 'User Tidak Dikenal' // Tambah properti userName tanpa hapus userId
+    }));
+
+    if (role === 'admin') return assessmentsWithUser;
+    return assessmentsWithUser.filter(a => a.userId === userId);
   }
 
   getById(id, userId, role) {
@@ -124,7 +151,11 @@ class AssessmentService {
     if (role !== 'admin' && assessment.userId !== userId) {
       throw { status: 403, message: 'Akses ditolak' };
     }
-    return assessment;
+    const user = userRepository.findById(assessment.userId);
+    return {
+      ...assessment,
+      name: user ? user.name : 'User Tidak Dikenal'
+    };
   }
 }
 

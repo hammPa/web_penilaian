@@ -222,7 +222,7 @@ export default function UserList() {
                 {users.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-800">{user.name}</td>
-                    <td className="px-6 py-4 text-slate-600">@{user.username}</td>
+                    <td className="px-6 py-4 text-slate-600">{user.username}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                         user.role === 'admin' ? 'bg-[#C8933E]/10 text-[#C8933E]' : 'bg-slate-100 text-slate-600'

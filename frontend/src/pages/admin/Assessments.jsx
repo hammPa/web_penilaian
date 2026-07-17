@@ -8,7 +8,7 @@ import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import tableService from '../../services/tableService';
 import { useToast } from '../../hooks/useToast';
-import { Eye, Image as ImageIcon } from 'lucide-react';
+import { Eye, Image as ImageIcon, Search, ArrowUpDown } from 'lucide-react';
 
 function ScoreBadge({ percentage }) {
   const tone =
@@ -19,7 +19,7 @@ function ScoreBadge({ percentage }) {
       : 'bg-[#C1443A]/10 text-[#C1443A]';
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>
-      {Number(percentage).toFixed(2)}%
+      {Number(percentage).toFixed(2)}
     </span>
   );
 }
@@ -27,14 +27,9 @@ function ScoreBadge({ percentage }) {
 function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
   if (!item) return null;
   const { subtotals = {}, total, percentage, details = [] } = item.results || {};
-
-  // maxTotal diturunkan dari percentage = total / maxTotal * 100
   const maxTotal = percentage > 0 ? Math.round(total / (percentage / 100)) : 0;
-
-  // Base URL untuk file statis (uploads), dipisah dari /api
   const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
 
-  // Kelompokkan jawaban: tabel -> kriteria -> variabel
   const groupedByTable = useMemo(() => {
     const byCriteria = {};
     details.forEach((d) => {
@@ -63,13 +58,8 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
             {maxTotal > 0 && <span className="text-sm font-normal text-slate-400"> / {Number(maxTotal).toFixed(2)}</span>}
           </p>
         </div>
-        <div className="rounded-lg bg-slate-50 px-4 py-3">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Persentase</p>
-          <p className="font-serif text-xl font-semibold text-[#17203A]">{Number(percentage).toFixed(2)}%</p>
-        </div>
       </div>
 
-      {/* Foto Dokumentasi */}
       {item.photos && item.photos.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3 text-[#17203A]">
@@ -115,7 +105,7 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
                         {criteriaMap[criteriaId]?.name || 'Kriteria tidak diketahui'}
                       </p>
                       <span className="text-xs font-semibold text-slate-500">
-                        Subtotal: {subtotals[criteriaId] ?? '-'}
+                        Subtotal: {Number(subtotals[criteriaId]).toFixed(2) ?? '-'}
                       </span>
                     </div>
 
@@ -123,25 +113,20 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
                       {items.map((d) => {
                         const levelDesc = d.variable?.levels?.[d.level]?.description;
                         return (
-                          <div
-                            key={d.variableId}
-                            className="rounded-lg border border-slate-100 px-4 py-3"
-                          >
+                          <div key={d.variableId} className="rounded-lg border border-slate-100 px-4 py-3">
                             <div className="flex items-start justify-between gap-3">
                               <p className="text-sm font-medium text-[#17203A]">
                                 {d.variable?.name || 'Variabel tidak diketahui'}
                               </p>
                               <span className="shrink-0 font-serif font-semibold text-[#17203A]">
-                                {d.score}
+                                {Number(d.score).toFixed(2)}
                               </span>
                             </div>
                             <div className="mt-1 flex items-center gap-2">
                               <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
                                 Level {d.level}
                               </span>
-                              {levelDesc && (
-                                <span className="text-xs text-slate-500">{levelDesc}</span>
-                              )}
+                              {levelDesc && <span className="text-xs text-slate-500">{levelDesc}</span>}
                             </div>
                           </div>
                         );
@@ -166,6 +151,11 @@ export default function AdminAssessments() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const { showToast } = useToast();
+  const [visibleUserId, setVisibleUserId] = useState(null);
+
+  // State baru untuk kontrol Filter Pencarian & Pengurutan
+  const [searchName, setSearchName] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest'); // default: 'newest' (terbaru)
 
   useEffect(() => {
     const fetch = async () => {
@@ -176,6 +166,7 @@ export default function AdminAssessments() {
           criteriaService.getAll(),
           variableService.getAll(),
         ]);
+
         setAssessments(assessmentData);
         setTables(tableData);
         setCriteria(criteriaData);
@@ -207,46 +198,110 @@ export default function AdminAssessments() {
     return map;
   }, [variables]);
 
+  // Logika memproses data (Filtering berdasarkan nama + Sorting secara dinamis)
+  const processedAssessments = useMemo(() => {
+    let result = [...assessments];
+
+    // 1. Jalankan filter nama jika input diisi (none / kosong = tampilkan semua)
+    if (searchName.trim() !== '') {
+      result = result.filter((item) =>
+        item.name?.toLowerCase().includes(searchName.toLowerCase())
+      );
+    }
+
+    // 2. Jalankan pengurutan data sesuai opsi state
+    result.sort((a, b) => {
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    return result;
+  }, [assessments, searchName, sortOrder]);
+
   if (loading) return <Loading />;
 
   return (
     <div>
-      <header className="mb-8">
-        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Semua User</p>
-        <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">
-          Hasil Penilaian
-        </h1>
+      <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Semua User</p>
+          <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">
+            Hasil Penilaian
+          </h1>
+        </div>
       </header>
 
-      {assessments.length === 0 ? (
-        <EmptyState message="Belum ada penilaian" />
+      {/* Toolbar Filter & Sort Kontrol */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+        {/* Kolom Input Pencarian Nama */}
+        <div className="relative w-full sm:max-w-xs">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Cari berdasarkan nama..."
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:border-[#C8933E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8933E] transition-all"
+          />
+        </div>
+
+        {/* Dropdown Pilihan Urutan (Terbaru / Terlama) */}
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+          <ArrowUpDown size={14} className="text-slate-400" />
+          <span className="text-xs font-medium text-slate-500 hidden md:inline">Urutkan:</span>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="w-full sm:w-auto text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:border-[#C8933E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8933E] transition-all cursor-pointer"
+          >
+            <option value="newest">Terbaru</option>
+            <option value="oldest">Terlama</option>
+          </select>
+        </div>
+      </div>
+
+      {processedAssessments.length === 0 ? (
+        <EmptyState message={searchName ? "Nama tidak ditemukan" : "Belum ada penilaian"} />
       ) : (
         <>
           {/* MOBILE — daftar card, satu kolom */}
           <div className="md:hidden space-y-3">
-            {assessments.map((item) => {
-              const maxTotal = item.results.percentage > 0
-                ? Number(item.results.total / (item.results.percentage / 100)).toFixed(2)
-                : null;
+            {processedAssessments.map((item) => {
+              const isIdVisible = visibleUserId === item.id;
               return (
                 <div key={item.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 w-full">
                       <p className="font-mono text-[11px] text-slate-400">{item.id.slice(0, 8)}</p>
-                      <p className="text-sm font-medium text-slate-700 mt-0.5 truncate">User: {item.userId}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="text-sm font-medium text-slate-700 truncate">{item.name}</span>
+                        <button 
+                          onClick={() => setVisibleUserId(isIdVisible ? null : item.id)}
+                          className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors"
+                        >
+                          {isIdVisible ? 'Sembunyikan ID' : 'Lihat ID'}
+                        </button>
+                      </div>
+
+                      {isIdVisible && (
+                        <p className="text-xs text-slate-400 font-mono mt-1 bg-slate-50 p-1 rounded border border-slate-100 break-all">
+                          UID: {item.userId}
+                        </p>
+                      )}
+                      
+                      <p className="text-xs text-slate-400 mt-1">
                         {new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                     </div>
-                    <ScoreBadge percentage={item.results.percentage} />
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Total Skor</p>
                       <p className="font-serif text-lg font-semibold text-[#17203A]">
-                        {Number(item.results.total).toFixed(2)}
-                        {maxTotal && <span className="text-xs font-normal text-slate-400"> / {maxTotal}</span>}
+                        <ScoreBadge percentage={item.results.percentage} />
                       </p>
                     </div>
                     <button
@@ -264,36 +319,51 @@ export default function AdminAssessments() {
           {/* DESKTOP — tabel seperti semula */}
           <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <Table
-              headers={['ID', 'User ID', 'Tanggal', 'Total', 'Persentase', 'Detail']}
-              data={assessments}
-              renderRow={(item) => (
-                <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id.slice(0, 8)}</td>
-                  <td className="px-6 py-4 text-slate-600">{item.userId}</td>
-                  <td className="px-6 py-4 text-slate-600">
-                    {new Date(item.createdAt).toLocaleString('id-ID')}
-                  </td>
-                  <td className="px-6 py-4 font-serif font-semibold text-[#17203A]">
-                    {Number(item.results.total).toFixed(2)}
-                    {item.results.percentage > 0 && (
-                      <span className="text-sm font-normal text-slate-400">
-                        {' '}/ {Number(item.results.total / (item.results.percentage / 100)).toFixed(2)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <ScoreBadge percentage={item.results.percentage} />
-                  </td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => setSelected(item)}
-                      className="inline-flex items-center gap-1.5 text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
-                    >
-                      <Eye size={16} /> Lihat
-                    </button>
-                  </td>
-                </tr>
-              )}
+              headers={['ID', 'User', 'Tanggal', 'Total', 'Detail']}
+              data={processedAssessments}
+              renderRow={(item) => {
+                const isIdVisible = visibleUserId === item.id;
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id.slice(0, 8)}</td>
+                    
+                    <td className="px-6 py-4 text-slate-600">
+                      <div className="relative flex items-center gap-2">
+                        <span className="font-medium text-[#17203A]">{item.name}</span>
+                        
+                        <button
+                          onClick={() => setVisibleUserId(isIdVisible ? null : item.id)}
+                          title="Tampilkan / Sembunyikan User ID"
+                          className={`p-1 rounded-md hover:bg-slate-100 transition-colors ${isIdVisible ? 'text-[#C8933E]' : 'text-slate-400'}`}
+                        >
+                          <Eye size={12} />
+                        </button>
+
+                        {isIdVisible && (
+                          <div className="absolute left-0 top-full mt-1 z-10 bg-[#17203A] text-white text-[11px] font-mono px-2 py-1 rounded shadow-md border border-slate-700 whitespace-nowrap">
+                            ID: {item.userId}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    
+                    <td className="px-6 py-4 text-slate-600">
+                      {new Date(item.createdAt).toLocaleString('id-ID')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <ScoreBadge percentage={item.results.percentage} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => setSelected(item)}
+                        className="inline-flex items-center gap-1.5 text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
+                      >
+                        <Eye size={16} /> Lihat
+                      </button>
+                    </td>
+                  </tr>
+                );
+              }}
             />
           </div>
         </>

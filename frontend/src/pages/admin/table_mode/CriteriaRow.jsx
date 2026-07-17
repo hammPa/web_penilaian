@@ -58,7 +58,7 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
           name: criteria.name,
           criteriaId: criteria.id,
           weight: bobot, // Tetap pertahankan bobot lama jika bikin baru
-          formula: 'koefisien * skor',
+          formula: 'bobot * skor',
           variables: defaultLevels
         });
       }
@@ -119,7 +119,7 @@ export default function CriteriaRow({ tableId, criteria, variables, onVariableCh
           name: criteria.name,
           criteriaId: criteria.id,
           weight: finalWeight,
-          formula: 'koefisien * skor',
+          formula: 'bobot * skor',
           variables: defaultLevels
         });
       }

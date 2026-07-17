@@ -223,7 +223,7 @@ export default function CriteriaVariables() {
                     }}
                     placeholder={`Masukkan deskripsi untuk skor ${idx}...`}
                     className={`${inputClass} min-h-[44px] resize-y py-2.5 flex-1`}
-                    rows="2"
+                    rows="4"
                   />
 
                   {form.variables.length > MIN_LEVEL_COUNT && idx === form.variables.length - 1 && (

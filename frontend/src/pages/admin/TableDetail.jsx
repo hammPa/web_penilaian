@@ -104,7 +104,6 @@ export default function TableDetail() {
     'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition';
   const labelClass = 'block text-sm font-medium text-slate-700 mb-1';
 
-  // Balik ke halaman Tabel Penilaian milik sesi ini (bukan /admin/tables yang sudah tidak ada)
   const backLink = table.sessionId ? `/admin/sessions/${table.sessionId}/tables` : '/admin/sessions';
 
   return (
@@ -116,10 +115,10 @@ export default function TableDetail() {
         <ArrowLeft size={16} /> Kembali ke Daftar Tabel
       </Link>
 
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Tabel</p>
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#17203A]">
+          <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">
             {table.name}
           </h1>
           {table.description && (
@@ -128,7 +127,7 @@ export default function TableDetail() {
         </div>
         <button
           onClick={openCreate}
-          className="bg-[#17203A] cursor-pointer hover:bg-[#232f52] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
+          className="w-full sm:w-auto bg-[#17203A] cursor-pointer hover:bg-[#232f52] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0 text-center"
         >
           + Tambah Kriteria
         </button>
@@ -137,36 +136,77 @@ export default function TableDetail() {
       {criteria.length === 0 ? (
         <EmptyState message="Belum ada kriteria pada tabel ini" icon={<ClipboardList />} />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <Table
-            headers={['Nama', 'Deskripsi', 'Variabel', 'Aksi']}
-            data={criteria}
-            renderRow={(item) => (
-              <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="px-6 py-4 font-medium text-[#17203A]">{item.name}</td>
-                <td className="px-6 py-4 text-slate-500">{item.description || '-'}</td>
-                <td className="px-6 py-4">
-                  <Link
-                    to={`/admin/tables/${tableId}/criteria/${item.id}`}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-[#17203A] hover:text-[#C8933E] transition-colors"
-                  >
-                    <Wrench size={14} /> {variableCounts[item.id] || 0} variabel
-                  </Link>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex gap-4 text-sm font-medium">
-                    <button onClick={() => openEdit(item)} className="text-[#17203A] cursor-pointer hover:text-[#C8933E] transition-colors">
-                      <Pencil className="w-4 h-4" />
+        <>
+          {/* MOBILE — Daftar card untuk layar kecil (< md) */}
+          <div className="md:hidden space-y-3">
+            {criteria.map((item) => (
+              <div key={item.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      to={`/admin/tables/${tableId}/criteria/${item.id}`}
+                      className="font-medium text-[#17203A] text-sm hover:text-[#C8933E] transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                    <p className="text-xs text-slate-500 mt-0.5 break-words">
+                      {item.description || '-'}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => openEdit(item)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg transition-colors">
+                      <Pencil size={16} />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="text-[#C1443A] cursor-pointer hover:text-[#a3372f] transition-colors">
-                      <Trash className="w-4 h-4" />
+                    <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-400 hover:text-[#C1443A] hover:bg-red-50 rounded-lg transition-colors">
+                      <Trash size={16} />
                     </button>
                   </div>
-                </td>
-              </tr>
-            )}
-          />
-        </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <Link
+                    to={`/admin/tables/${tableId}/criteria/${item.id}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 bg-[#17203A]/5 text-[#17203A] hover:bg-[#C8933E]/10 hover:text-[#8a6224] transition-all"
+                  >
+                    <Wrench size={12} /> {variableCounts[item.id] || 0} variabel
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP — Tabel bawaan untuk layar besar (md:) */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <Table
+              headers={['Nama', 'Deskripsi', 'Variabel', 'Aksi']}
+              data={criteria}
+              renderRow={(item) => (
+                <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="px-6 py-4 font-medium text-[#17203A]">{item.name}</td>
+                  <td className="px-6 py-4 text-slate-500">{item.description || '-'}</td>
+                  <td className="px-6 py-4">
+                    <Link
+                      to={`/admin/tables/${tableId}/criteria/${item.id}`}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#17203A] hover:text-[#C8933E] transition-colors"
+                    >
+                      <Wrench size={14} /> {variableCounts[item.id] || 0} variabel
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-4 text-sm font-medium">
+                      <button onClick={() => openEdit(item)} className="text-[#17203A] cursor-pointer hover:text-[#C8933E] transition-colors">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="text-[#C1443A] cursor-pointer hover:text-[#a3372f] transition-colors">
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            />
+          </div>
+        </>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Kriteria' : 'Tambah Kriteria'}>
