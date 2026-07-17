@@ -5,7 +5,16 @@ import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../hooks/useToast';
 import userService from '../../services/userService';
 import teamService from '../../services/teamService';
-import { Users, Edit2, Trash2 } from 'lucide-react';
+import { Users, Edit2, Trash2, KeyRound, Shuffle, Copy } from 'lucide-react';
+
+const generateRandomPassword = (length = 12) => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+};
 
 export default function UserList() {
   const [users, setUsers] = useState([]);
@@ -14,6 +23,12 @@ export default function UserList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const { showToast } = useToast();
+
+  // State terpisah untuk modal Reset Password
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   const [form, setForm] = useState({ name: '', username: '', password: '', role: 'user', teamId: '' });
 
@@ -39,17 +54,15 @@ export default function UserList() {
 
   const openCreate = () => {
     setEditItem(null);
-    // teamId ikut di-reset -- sebelumnya field ini hilang dari form baru,
-    // jadi pengguna baru selalu ke-create tanpa tim walau dropdown-nya dipilih
     setForm({ name: '', username: '', password: '', role: 'user', teamId: '' });
     setModalOpen(true);
   };
 
   const openEdit = (item) => {
     setEditItem(item);
-    // Kosongkan password saat edit. Hanya diisi jika ingin diubah.
-    // teamId ikut di-load dari data existing -- sebelumnya selalu kosong,
-    // jadi tim yang sudah di-assign sebelumnya tidak kelihatan saat edit
+    // Password sengaja TIDAK dimuat/diedit dari sini lagi -- ganti password
+    // sekarang lewat tombol "Reset Password" khusus (lebih jelas alurnya,
+    // dan tercatat sebagai aksi admin di backend).
     setForm({ name: item.name, username: item.username, password: '', role: item.role, teamId: item.teamId || '' });
     setModalOpen(true);
   };
@@ -66,9 +79,8 @@ export default function UserList() {
     }
 
     try {
-      // Hapus password dari payload jika kosong (saat update)
       const payload = { ...form };
-      if (editItem && !payload.password) delete payload.password;
+      if (editItem) delete payload.password; // reset password lewat modal terpisah
 
       if (editItem) {
         await userService.update(editItem.id, payload);
@@ -92,6 +104,44 @@ export default function UserList() {
       fetchData();
     } catch (err) {
       showToast(err.response?.data?.message || 'Gagal menghapus', 'error');
+    }
+  };
+
+  const openResetPassword = (user) => {
+    setResetTarget(user);
+    setNewPassword('');
+    setResetModalOpen(true);
+  };
+
+  const handleGeneratePassword = () => {
+    setNewPassword(generateRandomPassword());
+  };
+
+  const handleCopyPassword = async () => {
+    if (!newPassword) return;
+    try {
+      await navigator.clipboard.writeText(newPassword);
+      showToast('Password disalin ke clipboard', 'success');
+    } catch {
+      showToast('Gagal menyalin, salin manual', 'error');
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      showToast('Password baru minimal 6 karakter', 'error');
+      return;
+    }
+    setResetting(true);
+    try {
+      await userService.resetPassword(resetTarget.id, newPassword);
+      showToast(`Password ${resetTarget.name} berhasil direset`, 'success');
+      setResetModalOpen(false);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal reset password', 'error');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -131,6 +181,9 @@ export default function UserList() {
                     <p className="text-xs text-slate-500 mt-0.5 truncate">@{user.username}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
+                    <button onClick={() => openResetPassword(user)} className="p-2 text-slate-400 hover:text-[#0F9D6D] hover:bg-[#0F9D6D]/10 rounded-lg transition-colors" title="Reset Password">
+                      <KeyRound size={16} />
+                    </button>
                     <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg transition-colors">
                       <Edit2 size={16} />
                     </button>
@@ -181,6 +234,9 @@ export default function UserList() {
                       {teams.find(t => t.id === user.teamId)?.name || '-'}
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <button onClick={() => openResetPassword(user)} className="p-2 text-slate-400 hover:text-[#0F9D6D] hover:bg-[#0F9D6D]/10 rounded-lg transition-colors" title="Reset Password">
+                        <KeyRound size={16} />
+                      </button>
                       <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg transition-colors">
                         <Edit2 size={16} />
                       </button>
@@ -196,6 +252,7 @@ export default function UserList() {
         </>
       )}
 
+      {/* Modal Tambah/Edit Pengguna (TANPA password lagi) */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Pengguna' : 'Tambah Pengguna'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -220,19 +277,19 @@ export default function UserList() {
               required
             />
           </div>
-          <div>
-            <label className={labelClass}>
-              Password {editItem && <span className="text-slate-400 font-normal text-xs">(Kosongkan jika tidak ingin diubah)</span>}
-            </label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              className={inputClass}
-              placeholder="Masukkan password"
-              required={!editItem}
-            />
-          </div>
+          {!editItem && (
+            <div>
+              <label className={labelClass}>Password Awal</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                className={inputClass}
+                placeholder="Minimal 6 karakter"
+                required
+              />
+            </div>
+          )}
           <div>
             <label className={labelClass}>Role</label>
             <select
@@ -257,12 +314,69 @@ export default function UserList() {
               ))}
             </select>
           </div>
+          {editItem && (
+            <p className="text-xs text-slate-500">
+              Untuk mengganti password, gunakan tombol <KeyRound size={12} className="inline align-text-bottom" /> Reset Password di daftar pengguna.
+            </p>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
               Batal
             </button>
             <button type="submit" className="px-4 py-2 bg-[#17203A] hover:bg-[#232f52] text-white rounded-lg text-sm font-semibold transition-colors">
               Simpan
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Reset Password */}
+      <Modal isOpen={resetModalOpen} onClose={() => setResetModalOpen(false)} title={`Reset Password — ${resetTarget?.name || ''}`}>
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <p className="text-sm text-slate-500">
+            Password baru akan langsung aktif. Pastikan disampaikan ke <span className="font-medium text-slate-700">{resetTarget?.name}</span> lewat jalur yang aman.
+          </p>
+          <div>
+            <label className={labelClass}>Password Baru</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className={inputClass}
+                placeholder="Minimal 6 karakter"
+                required
+              />
+              <button
+                type="button"
+                onClick={handleGeneratePassword}
+                className="shrink-0 px-3 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                title="Generate password acak"
+              >
+                <Shuffle size={16} />
+              </button>
+              {newPassword && (
+                <button
+                  type="button"
+                  onClick={handleCopyPassword}
+                  className="shrink-0 px-3 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                  title="Salin password"
+                >
+                  <Copy size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={() => setResetModalOpen(false)} className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={resetting}
+              className="px-4 py-2 bg-[#17203A] hover:bg-[#232f52] text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+            >
+              {resetting ? 'Menyimpan...' : 'Reset Password'}
             </button>
           </div>
         </form>

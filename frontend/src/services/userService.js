@@ -13,6 +13,10 @@ const userService = {
     const res = await api.put(`/users/${id}`, data);
     return res.data.data;
   },
+  resetPassword: async (id, newPassword) => {
+    const res = await api.put(`/users/${id}/reset-password`, { newPassword });
+    return res.data.data;
+  },
   remove: async (id) => {
     const res = await api.delete(`/users/${id}`);
     return res.data.data;

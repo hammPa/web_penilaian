@@ -104,10 +104,13 @@ export default function TableDetail() {
     'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-[#C8933E]/40 focus:border-[#C8933E] outline-none transition';
   const labelClass = 'block text-sm font-medium text-slate-700 mb-1';
 
+  // Balik ke halaman Tabel Penilaian milik sesi ini (bukan /admin/tables yang sudah tidak ada)
+  const backLink = table.sessionId ? `/admin/sessions/${table.sessionId}/tables` : '/admin/sessions';
+
   return (
     <div>
       <Link
-        to={`/admin/sessions/${table.sessionId}/tables`}
+        to={backLink}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors mb-4"
       >
         <ArrowLeft size={16} /> Kembali ke Daftar Tabel

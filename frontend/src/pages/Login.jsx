@@ -109,10 +109,6 @@ export default function Login() {
             ) : 'Masuk'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-xs text-slate-400 border-t border-slate-100 pt-4">
-          <p>Demo: admin/admin123 atau user/user123</p>
-        </div>
       </div>
     </div>
   );

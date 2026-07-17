@@ -1,7 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
-// Note: Sangat disarankan menggunakan bcrypt untuk hashing password di production
-// const bcrypt = require('bcrypt'); 
+const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/UserRepository');
+
+const SALT_ROUNDS = 10;
+const MIN_PASSWORD_LENGTH = 6;
 
 class UserService {
   getAll() {
@@ -21,23 +23,25 @@ class UserService {
     if (!data.name || !data.username || !data.password || !data.role) {
       throw { status: 400, message: 'Semua field (name, username, password, role) wajib diisi' };
     }
+    if (data.password.length < MIN_PASSWORD_LENGTH) {
+      throw { status: 400, message: `Password minimal ${MIN_PASSWORD_LENGTH} karakter` };
+    }
 
     const existingUser = userRepository.findByUsername(data.username);
     if (existingUser) {
       throw { status: 400, message: 'Username sudah digunakan' };
     }
 
-    // const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
 
     const newUser = {
       id: uuidv4(),
       name: data.name,
       username: data.username,
-      password: data.password, // Ganti dengan hashedPassword jika pakai bcrypt
+      password: hashedPassword,
       role: data.role,
       teamId: data.teamId || null
     };
-    
     const created = userRepository.create(newUser);
     const { password: _, ...result } = created;
     return result;
@@ -53,11 +57,22 @@ class UserService {
       if (isDuplicate) throw { status: 400, message: 'Username sudah digunakan' };
     }
 
+    // Password hanya diproses ulang kalau memang dikirim & tidak kosong.
+    // Endpoint ini BUKAN jalur reset password oleh admin -- untuk itu pakai
+    // resetPassword() di bawah, yang tercatat siapa & kapan me-reset-nya.
+    let password = existing.password;
+    if (data.password) {
+      if (data.password.length < MIN_PASSWORD_LENGTH) {
+        throw { status: 400, message: `Password minimal ${MIN_PASSWORD_LENGTH} karakter` };
+      }
+      password = await bcrypt.hash(data.password, SALT_ROUNDS);
+    }
+
     const updated = {
       name: data.name || existing.name,
       username: data.username || existing.username,
       role: data.role || existing.role,
-      password: data.password ? data.password : existing.password, // Jangan diubah jika kosong
+      password,
       teamId: data.teamId !== undefined ? data.teamId : existing.teamId
     };
 
@@ -66,12 +81,33 @@ class UserService {
     return safeResult;
   }
 
+  /**
+   * Reset password oleh admin. Terpisah dari update() biasa supaya jelas
+   * ini aksi administratif (bukan user ganti password sendiri), dan
+   * tercatat siapa admin yang melakukannya & kapan -- penting untuk audit
+   * trail di skala production.
+   */
+  async resetPassword(id, newPassword, adminId) {
+    const existing = userRepository.findById(id);
+    if (!existing) throw { status: 404, message: 'User tidak ditemukan' };
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      throw { status: 400, message: `Password baru minimal ${MIN_PASSWORD_LENGTH} karakter` };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    const updated = userRepository.update(id, {
+      password: hashedPassword,
+      passwordResetAt: new Date().toISOString(),
+      passwordResetBy: adminId
+    });
+
+    const { password: _, ...safeResult } = updated;
+    return safeResult;
+  }
+
   delete(id) {
     const existing = userRepository.findById(id);
     if (!existing) throw { status: 404, message: 'User tidak ditemukan' };
-    
-    // Opsional: Mencegah admin menghapus dirinya sendiri
-    // if (existing.role === 'admin') throw { status: 403, message: 'Tidak dapat menghapus admin' };
 
     userRepository.delete(id);
     return { message: 'User berhasil dihapus' };

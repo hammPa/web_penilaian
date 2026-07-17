@@ -38,6 +38,17 @@ class UserController {
     }
   }
 
+  async resetPassword(req, res, next) {
+    try {
+      const { newPassword } = req.body;
+      // req.user diisi authMiddleware dari token -> id admin yang sedang login
+      const data = await userService.resetPassword(req.params.id, newPassword, req.user.id);
+      success(res, data, 'Password berhasil direset');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async delete(req, res, next) {
     try {
       const result = await userService.delete(req.params.id);
