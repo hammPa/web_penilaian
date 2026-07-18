@@ -301,7 +301,7 @@ export default function AdminAssessments() {
                     <div>
                       <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Total Skor</p>
                       <p className="font-serif text-lg font-semibold text-[#17203A]">
-                        <ScoreBadge percentage={item.results.percentage} />
+                        <ScoreBadge percentage={Number(item.results.total).toFixed(2)} />
                       </p>
                     </div>
                     <button
@@ -351,7 +351,7 @@ export default function AdminAssessments() {
                       {new Date(item.createdAt).toLocaleString('id-ID')}
                     </td>
                     <td className="px-6 py-4">
-                      <ScoreBadge percentage={item.results.percentage} />
+                      <ScoreBadge percentage={Number(item.results.total).toFixed(2)} />
                     </td>
                     <td className="px-6 py-4">
                       <button

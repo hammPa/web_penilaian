@@ -9,27 +9,6 @@ import criteriaService from '../../services/criteriaService';
 import tableService from '../../services/tableService';
 import { Image as ImageIcon, ArrowLeft } from 'lucide-react';
 
-function ScoreDial({ percentage = 0, size = 116 }) {
-  const angle = Math.min(100, Math.max(0, percentage)) * 3.6;
-  return (
-    <div
-      className="relative grid place-items-center rounded-full shrink-0 mx-auto sm:mx-0"
-      style={{
-        width: size,
-        height: size,
-        background: `conic-gradient(#C8933E ${angle}deg, rgba(255,255,255,0.18) ${angle}deg)`,
-      }}
-    >
-      <div className="absolute inset-[7px] rounded-full bg-[#17203A]" />
-      <div className="relative flex flex-col items-center">
-        <span className="font-serif text-2xl font-semibold text-white tracking-tight">
-          {percentage}%
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export default function AssessmentResult() {
   const { id } = useParams();
   const [assessment, setAssessment] = useState(null);
@@ -188,7 +167,6 @@ export default function AssessmentResult() {
 
       {/* Summary Band Card */}
       <div className="mb-6 rounded-xl bg-[#17203A] text-white p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5 sm:gap-6 shadow-sm text-center sm:text-left">
-        <ScoreDial percentage={percentage} />
         <div className="flex-1 w-full grid grid-cols-2 gap-3 sm:gap-4 pt-3 sm:pt-0 border-t border-white/10 sm:border-none">
           <div>
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-slate-400">Tanggal</p>

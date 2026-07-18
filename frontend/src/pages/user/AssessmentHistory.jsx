@@ -138,7 +138,7 @@ export default function AssessmentHistory() {
                   <div>
                     <span className="text-xs text-slate-400 block mb-0.5">Skor Total</span>
                     <span className="font-serif font-semibold text-lg text-[#17203A]">
-                      <ScoreBadge percentage={item.results.percentage} />
+                      <ScoreBadge percentage={Number(item.results.total.toFixed(2))} />
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function AssessmentHistory() {
                         day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                       })}
                     </td>
-                    <td className="px-6 py-4"><ScoreBadge percentage={item.results.percentage} /></td>
+                    <td className="px-6 py-4"><ScoreBadge percentage={Number(item.results.total).toFixed(2)} /></td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <Link
