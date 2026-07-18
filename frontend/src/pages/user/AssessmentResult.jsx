@@ -7,7 +7,8 @@ import assessmentService from '../../services/assessmentService';
 import variableService from '../../services/variableService';
 import criteriaService from '../../services/criteriaService';
 import tableService from '../../services/tableService';
-import { Image as ImageIcon, ArrowLeft } from 'lucide-react';
+import { Image as ImageIcon, ArrowLeft, Download } from 'lucide-react';
+import { userHistoryPdfExport } from '../../utils/historyPdfExport';
 
 export default function AssessmentResult() {
   const { id } = useParams();
@@ -18,6 +19,7 @@ export default function AssessmentResult() {
   const [criteria, setCriteria] = useState([]);
   const [tables, setTables] = useState([]);
   const [showDetail, setShowDetail] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -74,7 +76,7 @@ export default function AssessmentResult() {
   const orphanCriteriaIds = subtotalCriteriaIds.filter(
     cid => !criteriaMap[cid] || !tables.some(t => t.id === criteriaMap[cid].tableId)
   );
-
+  
   const renderCriteriaCard = (criteriaId) => {
     const subtotal = assessment.results.subtotals[criteriaId];
     const crit = criteriaMap[criteriaId] || { name: criteriaId };
@@ -88,7 +90,7 @@ export default function AssessmentResult() {
             {crit.name}
           </h3>
           <span className="text-xs sm:text-sm text-slate-500 whitespace-nowrap mt-0.5">
-            Subtotal <span className="font-semibold text-[#17203A]">{subtotal}</span>
+            Subtotal <span className="font-semibold text-[#17203A]">{Number(subtotal).toFixed(2)}</span>
           </span>
         </div>
 
@@ -128,7 +130,7 @@ export default function AssessmentResult() {
                   </div>
                   {/* Skor di bagian kanan */}
                   <span className="text-slate-500 font-semibold tabular-nums text-xs sm:text-sm pt-0.5">
-                    {score}
+                    {Number(score).toFixed(2)}
                   </span>
                 </div>
               );
@@ -147,6 +149,18 @@ export default function AssessmentResult() {
 
   const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
 
+
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      await userHistoryPdfExport({ assessment, variables, criteria, tables, baseUrl });
+    } catch (err) {
+      showToast('Gagal membuat PDF', 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-6 p-6 md:-m-8 md:p-8">
       {/* Top Navigation & Header */}
@@ -157,12 +171,21 @@ export default function AssessmentResult() {
             Hasil Penilaian
           </h1>
         </div>
-        <Link
-          to="/assessments"
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors self-start sm:self-auto bg-white sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-lg shadow-sm sm:shadow-none border sm:border-none border-slate-200"
-        >
-          <ArrowLeft size={16} /> Kembali
-        </Link>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-white bg-[#17203A] hover:bg-[#0F9D6D] transition-colors px-3 py-1.5 rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Download size={16} /> {downloading ? 'Membuat PDF...' : 'Download PDF'}
+          </button>
+          <Link
+            to="/assessments"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors bg-white sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-lg shadow-sm sm:shadow-none border sm:border-none border-slate-200"
+          >
+            <ArrowLeft size={16} /> Kembali
+          </Link>
+        </div>
       </div>
 
       {/* Summary Band Card */}
@@ -179,8 +202,8 @@ export default function AssessmentResult() {
           <div>
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-slate-400">Total Nilai</p>
             <p className="mt-0.5 font-serif text-xl sm:text-2xl font-semibold text-[#C8933E]">
-              {total}
-              {maxTotal > 0 && <span className="text-xs sm:text-base font-normal text-slate-400"> / {maxTotal}</span>}
+              {Number(total).toFixed(2)}
+              {/* {maxTotal > 0 && <span className="text-xs sm:text-base font-normal text-slate-400"> / {maxTotal}</span>} */}
             </p>
           </div>
         </div>

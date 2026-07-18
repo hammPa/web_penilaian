@@ -8,7 +8,8 @@ import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import tableService from '../../services/tableService';
 import { useToast } from '../../hooks/useToast';
-import { Eye, Image as ImageIcon, Search, ArrowUpDown } from 'lucide-react';
+import { Eye, Image as ImageIcon, Search, ArrowUpDown, Download } from 'lucide-react';
+import { adminAssessmentPdfExport } from '../../utils/historyPdfExport';
 
 function ScoreBadge({ percentage }) {
   const tone =
@@ -25,6 +26,10 @@ function ScoreBadge({ percentage }) {
 }
 
 function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
+  const [downloading, setDownloading] = useState(false);
+  const { showToast } = useToast();
+
+
   if (!item) return null;
   const { subtotals = {}, total, percentage, details = [] } = item.results || {};
   const maxTotal = percentage > 0 ? Math.round(total / (percentage / 100)) : 0;
@@ -48,16 +53,35 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
     return byTable;
   }, [details, variableMap, criteriaMap]);
 
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      await adminAssessmentPdfExport({ item, tableMap, criteriaMap, variableMap, baseUrl });
+    } catch (err) {
+      showToast('Gagal membuat PDF', 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+
   return (
     <div>
-      <div className="mb-5 grid grid-cols-2 gap-3">
-        <div className="rounded-lg bg-slate-50 px-4 py-3">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="rounded-lg bg-slate-50 px-4 py-3 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Total Skor</p>
           <p className="font-serif text-xl font-semibold text-[#17203A]">
             {Number(total).toFixed(2)}
             {maxTotal > 0 && <span className="text-sm font-normal text-slate-400"> / {Number(maxTotal).toFixed(2)}</span>}
           </p>
         </div>
+        <button
+          onClick={handleDownloadPdf}
+          disabled={downloading}
+          className="inline-flex items-center gap-2 text-xs font-medium text-white bg-[#17203A] hover:bg-[#0F9D6D] transition-colors px-3 py-2 rounded-lg shadow-sm disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+        >
+          <Download size={14} /> {downloading ? 'Membuat...' : 'PDF'}
+        </button>
       </div>
 
       {item.photos && item.photos.length > 0 && (

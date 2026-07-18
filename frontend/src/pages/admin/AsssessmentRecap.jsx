@@ -11,7 +11,7 @@ import tableService from '../../services/tableService';
 import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import { Calculator, CalendarDays, Shield, Download } from 'lucide-react';
-import { rekapNilai } from './utils/rekapNilaiExport';
+import { rekapNilai } from '../../utils/rekapNilaiExport';
 
 export default function AssessmentRecap() {
   const [loading, setLoading] = useState(true);
