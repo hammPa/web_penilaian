@@ -205,6 +205,9 @@ export default function AdminAssessments() {
   // State baru untuk kontrol Filter Pencarian & Pengurutan
   const [searchName, setSearchName] = useState('');
   const [sortOrder, setSortOrder] = useState('newest'); // default: 'newest' (terbaru)
+  const [searchField, setSearchField] = useState('all'); // 'all' | 'name' | 'group'
+
+
 
   useEffect(() => {
     const fetch = async () => {
@@ -251,11 +254,14 @@ export default function AdminAssessments() {
   const processedAssessments = useMemo(() => {
     let result = [...assessments];
 
-    // 1. Jalankan filter nama jika input diisi (none / kosong = tampilkan semua)
+    // 1. Jalankan filter nama atau grup jika input diisi (none / kosong = tampilkan semua)
     if (searchName.trim() !== '') {
-      result = result.filter((item) =>
-        item.name?.toLowerCase().includes(searchName.toLowerCase())
-      );
+      const keyword = searchName.toLowerCase();
+      result = result.filter((item) => {
+        if (searchField === 'name') return item.name?.toLowerCase().includes(keyword);
+        if (searchField === 'group') return item.groupName?.toLowerCase().includes(keyword);
+        return item.name?.toLowerCase().includes(keyword) || item.groupName?.toLowerCase().includes(keyword);
+      });
     }
 
     // 2. Jalankan pengurutan data sesuai opsi state
@@ -266,7 +272,7 @@ export default function AdminAssessments() {
     });
 
     return result;
-  }, [assessments, searchName, sortOrder]);
+  }, [assessments, searchName, sortOrder, searchField]);
 
   if (loading) return <Loading />;
 
@@ -283,19 +289,31 @@ export default function AdminAssessments() {
 
       {/* Toolbar Filter & Sort Kontrol */}
       <div className="mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-        {/* Kolom Input Pencarian Nama */}
-        <div className="relative w-full sm:max-w-xs">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari berdasarkan nama..."
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:border-[#C8933E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8933E] transition-all"
-          />
+        {/* Kolom Input Pencarian + Filter Field */}
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:max-w-md">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Cari nama atau grup..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:border-[#C8933E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8933E] transition-all"
+            />
+          </div>
+
+          <select
+            value={searchField}
+            onChange={(e) => setSearchField(e.target.value)}
+            className="text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:border-[#C8933E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8933E] transition-all cursor-pointer shrink-0"
+          >
+            <option value="all">Semua</option>
+            <option value="name">Nama</option>
+            <option value="group">Grup</option>
+          </select>
         </div>
 
-        {/* Dropdown Pilihan Urutan (Terbaru / Terlama) */}
+        {/* Dropdown Pilihan Urutan */}
         <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
           <ArrowUpDown size={14} className="text-slate-400" />
           <span className="text-xs font-medium text-slate-500 hidden md:inline">Urutkan:</span>
