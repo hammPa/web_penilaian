@@ -67,6 +67,24 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
 
   return (
     <div>
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Sesi</p>
+          <p className="text-sm font-medium text-[#17203A]">{item.sessionName || '-'}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Grup</p>
+          <p className="text-sm font-medium text-[#17203A]">{item.groupName || '-'}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Tim</p>
+          <p className="text-sm font-medium text-[#17203A]">{item.teamName || '-'}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Penilai</p>
+          <p className="text-sm font-medium text-[#17203A]">{item.name || '-'}</p>
+        </div>
+      </div>
       <div className="mb-5 flex items-center justify-between gap-3">
         <div className="rounded-lg bg-slate-50 px-4 py-3 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Total Skor</p>
@@ -318,6 +336,9 @@ export default function AdminAssessments() {
                       <p className="text-xs text-slate-400 mt-1">
                         {new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {item.sessionName} · {item.groupName} · {item.teamName}
+                      </p>
                     </div>
                   </div>
 
@@ -343,7 +364,7 @@ export default function AdminAssessments() {
           {/* DESKTOP — tabel seperti semula */}
           <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <Table
-              headers={['ID', 'User', 'Tanggal', 'Total', 'Detail']}
+              headers={['ID', 'User', 'Sesi', 'Grup', 'Tim', 'Tanggal', 'Total', 'Detail']}
               data={processedAssessments}
               renderRow={(item) => {
                 const isIdVisible = visibleUserId === item.id;
@@ -371,6 +392,10 @@ export default function AdminAssessments() {
                       </div>
                     </td>
                     
+                    <td className="px-6 py-4 text-slate-600 text-sm">{item.sessionName || '-'}</td>
+                    <td className="px-6 py-4 text-slate-600 text-sm">{item.groupName || '-'}</td>
+                    <td className="px-6 py-4 text-slate-600 text-sm">{item.teamName || '-'}</td>
+
                     <td className="px-6 py-4 text-slate-600">
                       {new Date(item.createdAt).toLocaleString('id-ID')}
                     </td>

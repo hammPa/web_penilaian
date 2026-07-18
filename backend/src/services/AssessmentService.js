@@ -4,6 +4,9 @@ const variableRepository = require('../repositories/VariableRepository');
 const criteriaRepository = require('../repositories/CriteriaRepository');
 const tableRepository = require('../repositories/TableRepository');
 const userRepository = require('../repositories/UserRepository');
+const groupRepository = require('../repositories/GroupRepository');
+const sessionRepository = require('../repositories/SessionRepository');
+const teamRepository = require('../repositories/TeamRepository');
 const { evaluateFormula } = require('../utils/evaluator');
 
 class AssessmentService {
@@ -154,6 +157,20 @@ class AssessmentService {
     return assessmentRepository.update(id, updated);
   }
 
+  _enrichWithNames(assessment, userMap) {
+    const group = groupRepository.findById(assessment.groupId);
+    const session = sessionRepository.findById(assessment.sessionId);
+    const team = group?.teamId ? teamRepository.findById(group.teamId) : null;
+
+    return {
+      ...assessment,
+      name: userMap ? (userMap[assessment.userId] || 'User Tidak Dikenal') : assessment.name,
+      groupName: group?.name || 'Grup tidak ditemukan',
+      sessionName: session?.name || 'Sesi tidak ditemukan',
+      teamName: team?.name || '-'
+    };
+  }
+
   getAll(userId, role) {
     const all = assessmentRepository.findAll();
     const users = userRepository.findAll();
@@ -162,13 +179,10 @@ class AssessmentService {
     const userMap = {};
     users.forEach(u => { userMap[u.id] = u.name || 'No Name'; });
 
-    const assessmentsWithUser = all.map(a => ({
-      ...a,
-      name: userMap[a.userId] || 'User Tidak Dikenal' // Tambah properti userName tanpa hapus userId
-    }));
+    const enriched = all.map(a => this._enrichWithNames(a, userMap));
 
-    if (role === 'admin') return assessmentsWithUser;
-    return assessmentsWithUser.filter(a => a.userId === userId);
+    if (role === 'admin') return enriched; // awalnya aassessment withuser
+    return enriched.filter(a => a.userId === userId);
   }
 
   getById(id, userId, role) {
@@ -178,10 +192,8 @@ class AssessmentService {
       throw { status: 403, message: 'Akses ditolak' };
     }
     const user = userRepository.findById(assessment.userId);
-    return {
-      ...assessment,
-      name: user ? user.name : 'User Tidak Dikenal'
-    };
+    const withUser = { ...assessment, name: user ? user.name : 'User Tidak Dikenal' };
+    return this._enrichWithNames(withUser);
   }
 }
 

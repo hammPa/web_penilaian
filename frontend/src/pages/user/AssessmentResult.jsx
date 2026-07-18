@@ -172,6 +172,12 @@ export default function AssessmentResult() {
           </h1>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Link
+            to="/assessments"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors bg-white sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-lg shadow-sm sm:shadow-none border sm:border-none border-slate-200"
+          >
+            <ArrowLeft size={16} /> Kembali
+          </Link>
           <button
             onClick={handleDownloadPdf}
             disabled={downloading}
@@ -179,12 +185,6 @@ export default function AssessmentResult() {
           >
             <Download size={16} /> {downloading ? 'Membuat PDF...' : 'Download PDF'}
           </button>
-          <Link
-            to="/assessments"
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500 hover:text-[#17203A] transition-colors bg-white sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-lg shadow-sm sm:shadow-none border sm:border-none border-slate-200"
-          >
-            <ArrowLeft size={16} /> Kembali
-          </Link>
         </div>
       </div>
 
@@ -205,6 +205,28 @@ export default function AssessmentResult() {
               {Number(total).toFixed(2)}
               {/* {maxTotal > 0 && <span className="text-xs sm:text-base font-normal text-slate-400"> / {maxTotal}</span>} */}
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Info Sesi, Grup, Tim, Penilai */}
+      <div className="mb-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">Sesi</p>
+            <p className="text-sm font-medium text-[#17203A] mt-0.5 break-words">{assessment.sessionName || '-'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">Grup</p>
+            <p className="text-sm font-medium text-[#17203A] mt-0.5 break-words">{assessment.groupName || '-'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">Tim</p>
+            <p className="text-sm font-medium text-[#17203A] mt-0.5">{assessment.teamName || '-'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">Penilai</p>
+            <p className="text-sm font-medium text-[#17203A] mt-0.5 break-words">{assessment.name || '-'}</p>
           </div>
         </div>
       </div>

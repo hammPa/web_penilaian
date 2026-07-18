@@ -13,7 +13,10 @@ async function urlToBase64(url) {
 }
 
 // ---------- CORE RENDERER (dipakai bersama) ----------
-async function renderAssessmentPdf({ createdAt, total, photos, baseUrl, sections, fileName }) {
+async function renderAssessmentPdf({
+  createdAt, total, photos, baseUrl, sections, fileName,
+  sessionName, groupName, teamName, assessorName
+}) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -35,6 +38,12 @@ async function renderAssessmentPdf({ createdAt, total, photos, baseUrl, sections
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
+  doc.text(`Sesi: ${sessionName || '-'}`, margin, y);
+  y += 5;
+  doc.text(`Grup: ${groupName || '-'}     Tim: ${teamName || '-'}`, margin, y);
+  y += 5;
+  doc.text(`Penilai: ${assessorName || '-'}`, margin, y);
+  y += 5;
   doc.text(
     `Tanggal: ${new Date(createdAt).toLocaleString('id-ID', {
       day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -254,7 +263,11 @@ export async function userHistoryPdfExport({ assessment, variables, criteria, ta
     photos: assessment.photos,
     baseUrl,
     sections,
-    fileName: `Hasil-Penilaian-${assessment.id}.pdf`
+    fileName: `Hasil-Penilaian-${assessment.id}.pdf`,
+    sessionName: assessment.sessionName,
+    groupName: assessment.groupName,
+    teamName: assessment.teamName,
+    assessorName: assessment.name
   });
 }
 
@@ -299,6 +312,10 @@ export async function adminAssessmentPdfExport({ item, tableMap, criteriaMap, va
     photos: item.photos,
     baseUrl,
     sections,
-    fileName: `Hasil-Penilaian-${item.name || item.id}.pdf`
+    fileName: `Hasil-Penilaian-${item.name || item.id}.pdf`,
+    sessionName: item.sessionName,
+    groupName: item.groupName,
+    teamName: item.teamName,
+    assessorName: item.name
   });
 }
