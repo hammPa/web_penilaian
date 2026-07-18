@@ -23,6 +23,7 @@ export default function AssessmentForm() {
   
   const [photos, setPhotos] = useState([]);
   const [previews, setPreviews] = useState([]);
+  const [recommendation, setRecommendation] = useState('');
 
   const [searchParams] = useSearchParams();
   const groupId = searchParams.get('groupId');
@@ -96,8 +97,15 @@ export default function AssessmentForm() {
         selectedLevel: level
       }));
 
-    if (selectionArray.length === 0) {
-      showToast('Pilih setidaknya satu variabel', 'error');
+    const relevantVariables = variables.filter(v => {
+      const crit = criteria.find(c => c.id === v.criteriaId);
+      return crit && tables.some(t => t.id === crit.tableId);
+    });
+    const requiredVariables = relevantVariables.filter(v => getAvailableLevels(v).length > 0);
+    const unanswered = requiredVariables.filter(v => selections[v.id] === null || selections[v.id] === undefined);
+
+    if (unanswered.length > 0) {
+      showToast(`Masih ada ${unanswered.length} variabel yang belum diisi`, 'error');
       return;
     }
 
@@ -115,7 +123,7 @@ export default function AssessmentForm() {
         uploadedUrls = uploadRes.data.data;
       }
 
-      const result = await assessmentService.create(groupId, sessionId, selectionArray, uploadedUrls);
+      const result = await assessmentService.create(groupId, sessionId, selectionArray, uploadedUrls, recommendation);
       showToast('Penilaian berhasil disimpan', 'success');
 
       const newId = result?.id ?? result?.data?.id ?? result?.data?.data?.id;
@@ -223,23 +231,6 @@ export default function AssessmentForm() {
                                   <p className="text-xs text-red-500">Tidak ada level tersedia</p>
                                 ) : (
                                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
-                                    <label
-                                      className={`flex items-center gap-3 cursor-pointer rounded-lg border p-3 transition-colors ${
-                                        selectedLevel === null
-                                          ? 'border-[#C8933E] bg-[#C8933E]/5'
-                                          : 'border-slate-200 hover:border-slate-300 bg-white'
-                                      }`}
-                                    >
-                                      <input
-                                        type="radio"
-                                        name={`var-${variable.id}`}
-                                        checked={selectedLevel === null}
-                                        onChange={() => handleLevelChange(variable.id, null)}
-                                        className="w-4 h-4 shrink-0 accent-[#C8933E]"
-                                      />
-                                      <span className="text-sm font-medium text-slate-700">Tidak ada</span>
-                                    </label>
-                                    
                                     {availableLevels.map(({ level, description }) => (
                                       <label
                                         key={level}
@@ -310,6 +301,18 @@ export default function AssessmentForm() {
             </label>
           </div>
           <p className="text-[11px] sm:text-xs text-slate-400 mt-3 sm:mt-4 leading-normal">Upload foto dokumentasi tanpa batasan. Foto akan dikompresi otomatis untuk menghemat ruang.</p>
+        </div>
+
+        {/* Widget Rekomendasi (Opsional) */}
+        <div className="mt-6 sm:mt-8 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="font-semibold text-sm sm:text-base text-[#17203A] mb-3">Rekomendasi (Opsional)</h3>
+          <textarea
+            value={recommendation}
+            onChange={(e) => setRecommendation(e.target.value)}
+            rows={4}
+            placeholder="Tulis rekomendasi atau catatan tambahan untuk grup ini..."
+            className="w-full text-sm px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:border-[#C8933E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8933E] transition-all resize-none"
+          />
         </div>
 
         {/* Pendekatan Terbaik: Sticky Action Bar + Progress di Bagian Bawah Halaman */}

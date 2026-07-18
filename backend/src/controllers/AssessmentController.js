@@ -4,9 +4,9 @@ const { success } = require('../utils/responseFormatter');
 class AssessmentController {
   async create(req, res, next) {
     try {
-      const { groupId, sessionId, selections, photos } = req.body;
+      const { groupId, sessionId, selections, photos, recommendation } = req.body;
       // selections: [{ variableId, selectedLevel }]
-      const assessment = await assessmentService.create(req.user.id, groupId, sessionId, selections, photos);
+      const assessment = await assessmentService.create(req.user.id, groupId, sessionId, selections, photos, recommendation);
       success(res, assessment, 'Penilaian berhasil disimpan', 201);
     } catch (err) {
       next(err);
@@ -33,12 +33,12 @@ class AssessmentController {
 
   async update(req, res, next) {
     try {
-      const { selections, photos } = req.body;
+      const { selections, photos, recommendation } = req.body;
       const assessment = await assessmentService.update(
         req.params.id,
         req.user.id,
         req.user.role,
-        { selections, photos }
+        { selections, photos, recommendation }
       );
       success(res, assessment, 'Penilaian berhasil diperbarui');
     } catch (err) {

@@ -130,6 +130,13 @@ function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
         </div>
       )}
 
+      {/* {item.recommendation && item.recommendation.trim() !== '' && ( */}
+        <div className="mb-6 rounded-lg border border-slate-200 px-4 py-3">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400 mb-1">Rekomendasi</p>
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{item.recommendation}</p>
+        </div>
+      {/* )} */}
+
       {Object.keys(groupedByTable).length === 0 ? (
         <p className="text-sm text-slate-400">Tidak ada rincian jawaban.</p>
       ) : (

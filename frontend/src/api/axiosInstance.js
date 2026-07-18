@@ -24,8 +24,10 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+
     // Pastikan tidak ada alert atau redirect yang sedang berjalan
-    if (error.response?.status === 401 && !isAlertShowing) {
+    if (error.response?.status === 401 && !isLoginRequest && !isAlertShowing) {
       
       // Ambil pesan error (tambahkan fallback string kosong jika undefined)
       const errorMessage = error.response?.data?.message || '';

@@ -12,6 +12,8 @@ import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import { Calculator, CalendarDays, Shield, Download } from 'lucide-react';
 import { rekapNilai } from '../../utils/rekapNilaiExport';
+import { groupRecapPdfExport } from '../../utils/rekapGrupPdfExport';
+import { rekapNilaiPdf } from '../../utils/rekapNilaiPdfExport';
 
 export default function AssessmentRecap() {
   const [loading, setLoading] = useState(true);
@@ -164,6 +166,24 @@ export default function AssessmentRecap() {
     });
   };
 
+  const handleExportGroupPdf = (groupItem) => {
+    const sessionName = sessions.find(s => s.id === selectedSessionId)?.name;
+    const teamName = teams.find(t => t.id === groupItem.teamId)?.name;
+    groupRecapPdfExport({ group: { ...groupItem, teamName }, sessionName });
+  };
+
+  const handleExportRekapPdf = () => {
+    rekapNilaiPdf({
+      reportData,
+      sessions,
+      selectedSessionId,
+      tables,
+      criteria,
+      teams,
+      showToast
+    });
+  };
+
   return (
     <div className="min-h-full bg-[#F3F4F7] -m-4 p-4 sm:-m-6 sm:p-6 md:-m-8 md:p-8">
       <header className="mb-6 md:mb-8 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
@@ -210,6 +230,13 @@ export default function AssessmentRecap() {
             <Download size={16} />
             Export Excel
           </button>
+          <button
+            onClick={handleExportRekapPdf}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C8933E] text-white rounded-lg text-sm font-medium hover:bg-[#b17f30] transition-colors shadow-sm"
+          >
+            <Download size={16} />
+            Export PDF
+          </button>
         </div>
       </header>
 
@@ -218,9 +245,9 @@ export default function AssessmentRecap() {
       ) : (
         <>
           {/* MOBILE & TABLET: card list (di bawah md) */}
-          <div className="grid gap-3 md:hidden w-full max-w-full overflow-hidden">
+          <div className="grid gap-3 md:hidden w-full max-w-full">
             {reportData.map((data) => (
-              <div key={data.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <div key={data.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm overflow-hidden">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-semibold text-[#17203A] text-base truncate">{data.name}</p>
@@ -256,6 +283,13 @@ export default function AssessmentRecap() {
                     ))}
                   </ul>
                 )}
+                <button
+                  onClick={() => handleExportGroupPdf(data)}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#17203A] text-white rounded-lg text-xs font-medium hover:bg-[#253053] transition-colors"
+                >
+                  <Download size={14} />
+                  Export PDF
+                </button>
               </div>
             ))}
           </div>
@@ -271,6 +305,7 @@ export default function AssessmentRecap() {
                     <th className="px-6 py-4 font-semibold text-slate-700 text-center">Status</th>
                     <th className="px-6 py-4 font-semibold text-slate-700">Penilai</th>
                     <th className="px-6 py-4 font-semibold text-slate-700 text-right">Rata-Rata</th>
+                    <th className="px-6 py-4 font-semibold text-slate-700 text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -312,6 +347,15 @@ export default function AssessmentRecap() {
                         ) : (
                           <span className="text-slate-300 font-serif text-xl">-</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => handleExportGroupPdf(data)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#17203A] text-white rounded-lg text-xs font-medium hover:bg-[#253053] transition-colors"
+                        >
+                          <Download size={13} />
+                          PDF
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -90,7 +90,7 @@ class AssessmentService {
     };
   }
 
-  async create(userId, groupId, sessionId, selections, photos = []) {
+  async create(userId, groupId, sessionId, selections, photos = [], recommendation = '') {
     if (!groupId || !sessionId) {
       throw { status: 400, message: 'Grup dan Sesi wajib disertakan' };
     }
@@ -120,6 +120,7 @@ class AssessmentService {
         selectedLevel: s.selectedLevel
       })),
       photos,
+      recommendation: recommendation,
       results
     };
 
@@ -127,7 +128,7 @@ class AssessmentService {
   }
 
   // update assessment milik sendiri (atau admin)
-  async update(id, userId, role, { selections, photos }) {
+  async update(id, userId, role, { selections, photos, recommendation }) {
     const assessment = assessmentRepository.findById(id);
     if (!assessment) throw { status: 404, message: 'Penilaian tidak ditemukan' };
 
@@ -151,6 +152,7 @@ class AssessmentService {
       })),
       photos: photos !== undefined ? photos : assessment.photos,
       results,
+      recommendation,
       updatedAt: new Date().toISOString()
     };
 

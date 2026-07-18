@@ -258,6 +258,13 @@ export default function AssessmentResult() {
         </div>
       )}
 
+      {/* {assessment.recommendation && assessment.recommendation.trim() !== '' && ( */}
+        <div className="mb-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="font-serif text-base sm:text-lg font-semibold text-[#17203A] mb-2">Rekomendasi</h3>
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{assessment.recommendation}</p>
+        </div>
+      {/* )} */}
+
       {/* Sticky Bottom / Floating Toggle Detail Container */}
       <div className="mb-6 flex justify-center sticky top-4 z-10 sm:relative sm:top-0">
         <button

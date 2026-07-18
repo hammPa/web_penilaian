@@ -237,11 +237,18 @@ export const rekapNilai = ({
       createCell('Rekomendasi', true)
     ];
     
-    const rDataRows = teamGroups.map(group => [
-      createCell(group.name),
-      createCell(group.gugus),
-      createCell('') 
-    ]);
+    const rDataRows = teamGroups.map(group => {
+      const rekomendasiText = (group.assessors || [])
+        .filter(a => a && a.recommendation && a.recommendation.trim() !== '')
+        .map(a => `${a.name}: ${a.recommendation.trim()}`)
+        .join('\n');
+
+      return [
+        createCell(group.name),
+        createCell(group.gugus),
+        createCell(rekomendasiText)
+      ];
+    });
     
     const rRows = [rHeaderRow, ...rDataRows];
     const rWs = XLSX.utils.aoa_to_sheet(rRows);

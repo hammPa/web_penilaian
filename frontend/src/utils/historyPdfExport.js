@@ -15,7 +15,7 @@ async function urlToBase64(url) {
 // ---------- CORE RENDERER (dipakai bersama) ----------
 async function renderAssessmentPdf({
   createdAt, total, photos, baseUrl, sections, fileName,
-  sessionName, groupName, teamName, assessorName
+  sessionName, groupName, teamName, assessorName, recommendation
 }) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -80,6 +80,21 @@ async function renderAssessmentPdf({
       }
     }
     y += imgSize + 10;
+  }
+
+  if (recommendation && recommendation.trim() !== '') {
+    checkPageBreak(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Rekomendasi', margin, y);
+    y += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const wrappedRekomendasi = doc.splitTextToSize(recommendation, pageWidth - margin * 2);
+    checkPageBreak(wrappedRekomendasi.length * 4 + 4);
+    doc.text(wrappedRekomendasi, margin, y);
+    y += wrappedRekomendasi.length * 4 + 8;
   }
 
   // Detail per tabel & kriteria
@@ -267,7 +282,8 @@ export async function userHistoryPdfExport({ assessment, variables, criteria, ta
     sessionName: assessment.sessionName,
     groupName: assessment.groupName,
     teamName: assessment.teamName,
-    assessorName: assessment.name
+    assessorName: assessment.name,
+    recommendation: assessment.recommendation
   });
 }
 
@@ -316,6 +332,7 @@ export async function adminAssessmentPdfExport({ item, tableMap, criteriaMap, va
     sessionName: item.sessionName,
     groupName: item.groupName,
     teamName: item.teamName,
-    assessorName: item.name
+    assessorName: item.name,
+    recommendation: item.recommendation
   });
 }
