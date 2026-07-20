@@ -17,11 +17,21 @@ export const rekapNilaiPdf = ({
     return;
   }
 
+  // =========================================================================
+  // 1. SORTING TABEL & KRITERIA (Merapikan Urutan Kolom)
+  // =========================================================================
   const sessionTables = tables.filter(t => t.sessionId === selectedSessionId);
+  // Urutkan Tabel secara natural (Tabel 1, Tabel 2, ... Tabel 10)
+  sessionTables.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
+  
   const tableList = sessionTables.map(t => ({ id: t.id, name: t.name }));
   const criteriaByTable = {};
+  
   sessionTables.forEach(t => {
-    criteriaByTable[t.id] = criteria.filter(c => c.tableId === t.id);
+    const tableCriteria = criteria.filter(c => c.tableId === t.id);
+    // Urutkan Kriteria di dalam masing-masing tabel
+    tableCriteria.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
+    criteriaByTable[t.id] = tableCriteria;
   });
 
   if (tableList.length === 0) {
@@ -31,7 +41,15 @@ export const rekapNilaiPdf = ({
 
   const sessionName = sessions.find(s => s.id === selectedSessionId)?.name || '-';
 
-  const MAX_ASSESSORS = reportData.reduce(
+  // =========================================================================
+  // 2. SORTING GRUP (Merapikan Urutan Baris)
+  // =========================================================================
+  // Clone array reportData lalu urutkan berdasarkan Nama Grup
+  const sortedReportData = [...reportData].sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+  );
+
+  const MAX_ASSESSORS = sortedReportData.reduce(
     (max, g) => Math.max(max, Array.isArray(g.assessors) ? g.assessors.length : 0),
     1
   );
@@ -47,9 +65,19 @@ export const rekapNilaiPdf = ({
     });
   });
 
+  // =========================================================================
+  // 3. SORTING TIM (Merapikan Urutan Halaman Detail Tim)
+  // =========================================================================
   const teamIdsInReport = [];
-  reportData.forEach(g => {
+  sortedReportData.forEach(g => {
     if (g.teamId && !teamIdsInReport.includes(g.teamId)) teamIdsInReport.push(g.teamId);
+  });
+  
+  // Urutkan ID Tim berdasarkan Nama Tim (Tim 1, Tim 2, dst)
+  teamIdsInReport.sort((idA, idB) => {
+    const teamA = teams.find(t => t.id === idA)?.name || '';
+    const teamB = teams.find(t => t.id === idB)?.name || '';
+    return teamA.localeCompare(teamB, undefined, { numeric: true });
   });
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
@@ -67,11 +95,29 @@ export const rekapNilaiPdf = ({
   };
 
   const tableTheme = {
-    headStyles: { fillColor: [23, 32, 58], textColor: 255, fontSize: 8, halign: 'center' },
-    bodyStyles: { fontSize: 8, valign: 'middle' },
-    alternateRowStyles: { fillColor: [245, 246, 248] },
+    headStyles: { fillColor: [23, 32, 58], textColor: 255, fontSize: 8, halign: 'center', valign: 'middle' },
+    bodyStyles: { fontSize: 8, valign: 'middle', lineColor: [220, 220, 220], lineWidth: 0.1 },
     styles: { cellPadding: 2, overflow: 'linebreak' },
     margin: { left: margin, right: margin }
+  };
+
+  const groupBoundaryHooks = {
+    didParseCell: (data) => {
+      if (data.section === 'body') {
+        const groupIndex = Math.floor(data.row.index / MAX_ASSESSORS);
+        data.cell.styles.fillColor = groupIndex % 2 === 0 ? [255, 255, 255] : [245, 248, 252];
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.row.index > 0) {
+        const isFirstRowInGroup = data.row.index % MAX_ASSESSORS === 0;
+        if (isFirstRowInGroup) {
+          doc.setDrawColor(80, 80, 80);
+          doc.setLineWidth(0.6);
+          doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+        }
+      }
+    }
   };
 
   // =========================================================================
@@ -82,25 +128,42 @@ export const rekapNilaiPdf = ({
   const rekapHead = [['Nama Grup', 'Gugus', 'Tim', 'Nama Penilai', ...tableList.map(t => t.name), 'Total Nilai', 'Rata-Rata']];
   const rekapBody = [];
 
-  reportData.forEach(group => {
+  // Gunakan sortedReportData agar baris terurut (Grup 1, Grup 2, ...)
+  sortedReportData.forEach(group => {
     const teamName = sanitizeSheetName(teams.find(t => t.id === group.teamId)?.name || '-');
     for (let s = 0; s < MAX_ASSESSORS; s++) {
       const assessor = group.assessors[s];
-      const row = [
-        s === 0 ? group.name : '',
-        s === 0 ? group.gugus : '',
-        s === 0 ? teamName : '',
-        assessor ? assessor.name : ''
-      ];
+      let row = [];
+
+      if (s === 0) {
+        row.push(
+          { content: group.name, rowSpan: MAX_ASSESSORS, styles: { halign: 'left', valign: 'middle' } },
+          { content: group.gugus || '-', rowSpan: MAX_ASSESSORS, styles: { halign: 'center', valign: 'middle' } },
+          { content: teamName, rowSpan: MAX_ASSESSORS, styles: { halign: 'left', valign: 'middle' } },
+          assessor ? assessor.name : '-'
+        );
+      } else {
+        row.push(assessor ? assessor.name : '-');
+      }
+
       tableList.forEach(t => {
         if (!assessor) { row.push(''); return; }
         const sum = assessor.perCriteria
           .filter(pc => pc.tableName === t.name)
           .reduce((acc, pc) => acc + Number(pc.score || 0), 0);
-        row.push(sum.toFixed(2));
+        row.push({ content: sum.toFixed(2), styles: { halign: 'center' } });
       });
-      row.push(assessor ? Number(assessor.score).toFixed(2) : '');
-      row.push(s === 0 ? group.average : '');
+
+      row.push({ content: assessor ? Number(assessor.score).toFixed(2) : '', styles: { halign: 'center' } });
+
+      if (s === 0) {
+        row.push({ 
+          content: String(group.average), 
+          rowSpan: MAX_ASSESSORS, 
+          styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } 
+        });
+      }
+
       rekapBody.push(row);
     }
   });
@@ -110,6 +173,7 @@ export const rekapNilaiPdf = ({
     body: rekapBody,
     startY: 25,
     ...tableTheme,
+    ...groupBoundaryHooks,
     columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 22 }, 2: { cellWidth: 20 }, 3: { cellWidth: 28 } }
   });
 
@@ -122,11 +186,21 @@ export const rekapNilaiPdf = ({
   const rkHead = [['Nama Grup', 'Tim', 'Nama Penilai', ...criteriaColumns.map(c => c.code)]];
   const rkBody = [];
 
-  reportData.forEach(group => {
+  sortedReportData.forEach(group => {
     const teamName = sanitizeSheetName(teams.find(t => t.id === group.teamId)?.name || '-');
     for (let s = 0; s < MAX_ASSESSORS; s++) {
       const assessor = group.assessors[s];
-      const row = [s === 0 ? group.name : '', s === 0 ? teamName : '', assessor ? assessor.name : ''];
+      let row = [];
+
+      if (s === 0) {
+        row.push(
+          { content: group.name, rowSpan: MAX_ASSESSORS, styles: { valign: 'middle' } },
+          { content: teamName, rowSpan: MAX_ASSESSORS, styles: { valign: 'middle' } },
+          assessor ? assessor.name : '-'
+        );
+      } else {
+        row.push(assessor ? assessor.name : '-');
+      }
 
       if (!assessor) {
         criteriaColumns.forEach(() => row.push(''));
@@ -135,26 +209,25 @@ export const rekapNilaiPdf = ({
         assessor.perCriteria.forEach(pc => { map[`${pc.tableName}||${pc.criteriaName}`] = pc.score; });
         criteriaColumns.forEach(col => {
           const key = `${col.tableName}||${col.criteriaName}`;
-          row.push(map[key] !== undefined ? Number(map[key]).toFixed(2) : '0.00');
+          row.push({ 
+            content: map[key] !== undefined ? Number(map[key]).toFixed(2) : '0.00',
+            styles: { halign: 'center' } 
+          });
         });
       }
       rkBody.push(row);
     }
   });
 
-  // Catatan kode kriteria (legenda) di bawah judul, karena kolom cuma muat kode
   autoTable(doc, {
     head: rkHead,
     body: rkBody,
     startY: 25,
     ...tableTheme,
-    columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 22 }, 2: { cellWidth: 28 } },
-    didDrawPage: (data) => {
-      // Legenda kode kriteria full name, di halaman terakhir tabel ini
-    }
+    ...groupBoundaryHooks,
+    columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 22 }, 2: { cellWidth: 28 } }
   });
 
-  // Halaman legenda kode -> nama kriteria
   doc.addPage();
   addTitle('Keterangan Kode Kriteria', `Sesi: ${sessionName}`);
   autoTable(doc, {
@@ -162,6 +235,7 @@ export const rekapNilaiPdf = ({
     body: criteriaColumns.map(c => [c.code, c.tableName, c.criteriaName]),
     startY: 25,
     ...tableTheme,
+    alternateRowStyles: { fillColor: [245, 246, 248] },
     columnStyles: { 0: { cellWidth: 20 } }
   });
 
@@ -171,7 +245,7 @@ export const rekapNilaiPdf = ({
   teamIdsInReport.forEach((teamId, teamIndex) => {
     const team = teams.find(t => t.id === teamId);
     const teamLabel = sanitizeSheetName(team?.name || `TIM ${teamIndex + 1}`);
-    const teamGroups = reportData.filter(g => g.teamId === teamId);
+    const teamGroups = sortedReportData.filter(g => g.teamId === teamId);
 
     doc.addPage();
     addTitle(`Detail Penilaian - Tim: ${teamLabel}`, `Sesi: ${sessionName}`);
@@ -182,16 +256,26 @@ export const rekapNilaiPdf = ({
     teamGroups.forEach(group => {
       for (let s = 0; s < MAX_ASSESSORS; s++) {
         const assessor = group.assessors[s];
-        const row = [s === 0 ? group.name : '', assessor ? assessor.name : ''];
+        let row = [];
+
+        if (s === 0) {
+          row.push(
+            { content: group.name, rowSpan: MAX_ASSESSORS, styles: { valign: 'middle' } },
+            assessor ? assessor.name : '-'
+          );
+        } else {
+          row.push(assessor ? assessor.name : '-');
+        }
 
         tableList.forEach(t => {
           if (!assessor) { row.push(''); return; }
           const sum = assessor.perCriteria
             .filter(pc => pc.tableName === t.name)
             .reduce((acc, pc) => acc + Number(pc.score || 0), 0);
-          row.push(sum.toFixed(2));
+          row.push({ content: sum.toFixed(2), styles: { halign: 'center' } });
         });
-        row.push(assessor ? Number(assessor.score).toFixed(2) : '');
+        
+        row.push({ content: assessor ? Number(assessor.score).toFixed(2) : '', styles: { halign: 'center' } });
         dBody.push(row);
       }
     });
@@ -201,10 +285,10 @@ export const rekapNilaiPdf = ({
       body: dBody,
       startY: 25,
       ...tableTheme,
+      ...groupBoundaryHooks,
       columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 32 } }
     });
 
-    // Rekomendasi per tim (kalau ada)
     const recBody = teamGroups
       .map(group => {
         const rekomendasiText = (group.assessors || [])
@@ -226,6 +310,7 @@ export const rekapNilaiPdf = ({
         body: recBody,
         startY: finalY + 14,
         ...tableTheme,
+        alternateRowStyles: { fillColor: [245, 246, 248] },
         columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 30 } }
       });
     }

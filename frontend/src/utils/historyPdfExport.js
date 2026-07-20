@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 async function urlToBase64(url) {
   const response = await fetch(url);
@@ -23,6 +24,16 @@ async function renderAssessmentPdf({
   const margin = 15;
   let y = margin;
 
+  // 1. MENGURUTKAN DATA (Sorting Numerik/Alfabet)
+  // Agar urut dari Tabel 1, Tabel 2, dst. Kriteria 1, Kriteria 2, dst.
+  sections.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
+  sections.forEach(sec => {
+    sec.criteria.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
+    // sec.criteria.forEach(crit => {
+    //   crit.items.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
+    // });
+  });
+
   const checkPageBreak = (needed) => {
     if (y + needed > pageHeight - margin) {
       doc.addPage();
@@ -30,34 +41,45 @@ async function renderAssessmentPdf({
     }
   };
 
-  // Header
+  // =====================================================================
+  // HEADER
+  // =====================================================================
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text('Hasil Penilaian', margin, y);
-  y += 8;
+  doc.text('LAPORAN HASIL PENILAIAN', margin, y);
+  
+  // Garis Bawah Header
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(23, 32, 58);
+  doc.line(margin, y + 2, pageWidth - margin, y + 2);
+  y += 10;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(`Sesi: ${sessionName || '-'}`, margin, y);
-  y += 5;
-  doc.text(`Grup: ${groupName || '-'}     Tim: ${teamName || '-'}`, margin, y);
-  y += 5;
-  doc.text(`Penilai: ${assessorName || '-'}`, margin, y);
-  y += 5;
-  doc.text(
-    `Tanggal: ${new Date(createdAt).toLocaleString('id-ID', {
-      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    })}`,
-    margin, y
-  );
-  y += 6;
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Total Nilai: ${Number(total).toFixed(2)}`, margin, y);
-  y += 10;
+  
+  // Informasi Meta dalam bentuk grid teks 2 Kolom
+  const leftColX = margin;
+  const rightColX = pageWidth / 2;
 
-  // Foto dokumentasi
+  doc.text(`Sesi: ${sessionName || '-'}`, leftColX, y);
+  doc.text(`Penilai: ${assessorName || '-'}`, rightColX, y);
+  y += 6;
+  doc.text(`Grup: ${groupName || '-'}`, leftColX, y);
+  doc.text(`Tanggal: ${new Date(createdAt).toLocaleString('id-ID', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  })}`, rightColX, y);
+  y += 6;
+  doc.text(`Tim: ${teamName || '-'}`, leftColX, y);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Total Keseluruhan: ${Number(total).toFixed(2)}`, rightColX, y);
+  y += 12;
+
+  // =====================================================================
+  // FOTO DOKUMENTASI
+  // =====================================================================
   if (photos && photos.length > 0) {
-    checkPageBreak(15);
+    checkPageBreak(25);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('Foto Dokumentasi', margin, y);
@@ -82,152 +104,163 @@ async function renderAssessmentPdf({
     y += imgSize + 10;
   }
 
+  // =====================================================================
+  // REKOMENDASI (Menggunakan Kotak autoTable agar Rapi)
+  // =====================================================================
   if (recommendation && recommendation.trim() !== '') {
-    checkPageBreak(15);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('Rekomendasi', margin, y);
-    y += 6;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    const wrappedRekomendasi = doc.splitTextToSize(recommendation, pageWidth - margin * 2);
-    checkPageBreak(wrappedRekomendasi.length * 4 + 4);
-    doc.text(wrappedRekomendasi, margin, y);
-    y += wrappedRekomendasi.length * 4 + 8;
+    autoTable(doc, {
+      head: [['Rekomendasi / Catatan']],
+      body: [[recommendation]],
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [23, 32, 58], textColor: 255, fontSize: 10 },
+      bodyStyles: { fontSize: 9, cellPadding: 4 },
+      margin: { left: margin, right: margin }
+    });
+    y = doc.lastAutoTable.finalY + 12;
   }
 
-  // Detail per tabel & kriteria
-  sections.forEach(({ name: tableName, criteria: criteriaList }) => {
-    checkPageBreak(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text(tableName, margin, y);
-    y += 7;
+  // =====================================================================
+  // DETAIL PENILAIAN (Tabel Per Seksi/Table)
+  // =====================================================================
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('Detail Penilaian', margin, y);
+  y += 6;
 
-    criteriaList.forEach(({ name: criteriaName, subtotal, items }) => {
-      const subtotalText = `Subtotal: ${Number(subtotal).toFixed(2)}`;
-      const subtotalWidth = doc.getTextWidth(subtotalText) + 2;
-      const nameMaxWidth = pageWidth - margin * 2 - subtotalWidth - 5; // sisakan jarak utk subtotal
+  sections.forEach((section) => {
+    // Header section
+    doc.setFontSize(11);
+    doc.setTextColor(23, 32, 58);
+    doc.text(`Tabel: ${section.name}`, margin, y + 2);
+    
+    const head = [['Kriteria', 'Variabel Penilaian', 'Pilihan Level', 'Skor']];
+    const body = [];
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      const wrappedName = doc.splitTextToSize(criteriaName, nameMaxWidth);
-
-      checkPageBreak(wrappedName.length * 5 + 3);
-      doc.text(wrappedName, margin, y);
-      // Subtotal ditaruh sejajar baris pertama nama kriteria, rata kanan
-      doc.text(subtotalText, pageWidth - margin - subtotalWidth + 2, y);
-
-      y += wrappedName.length * 5 + 3;
-
-      items.forEach(({ name, levelText, score }) => {
-        checkPageBreak(12);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        const wrappedLabel = doc.splitTextToSize(name, pageWidth - margin * 2 - 20);
-        doc.text(wrappedLabel, margin + 3, y);
-        doc.text(Number(score).toFixed(2), pageWidth - margin - 12, y);
-        y += wrappedLabel.length * 4;
-
-        doc.setTextColor(110);
-        const wrappedLevel = doc.splitTextToSize(levelText, pageWidth - margin * 2 - 20);
-        doc.text(wrappedLevel, margin + 3, y);
-        doc.setTextColor(0);
-        y += wrappedLevel.length * 4 + 3;
+    section.criteria.forEach((crit) => {
+      crit.items.forEach((item, index) => {
+        const itemScoreStr = Number(item.score).toFixed(2);
+        if (index === 0) {
+          // Rowspan untuk Kriteria
+          body.push([
+            { content: crit.name, rowSpan: crit.items.length, styles: { valign: 'middle', fontStyle: 'bold' } },
+            item.name,
+            item.levelText,
+            { content: itemScoreStr, styles: { halign: 'center' } }
+          ]);
+        } else {
+          body.push([
+            item.name,
+            item.levelText,
+            { content: itemScoreStr, styles: { halign: 'center' } }
+          ]);
+        }
       });
+      // Baris Tambahan untuk Subtotal Kriteria
+      body.push([
+        { content: `Subtotal ${crit.name}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [245, 246, 248] } },
+        { content: Number(crit.subtotal).toFixed(2), styles: { halign: 'center', fontStyle: 'bold', fillColor: [245, 246, 248] } }
+      ]);
+    });
 
-      y += 4;
+    autoTable(doc, {
+      head,
+      body,
+      startY: y + 5,
+      theme: 'grid',
+      headStyles: { fillColor: [70, 80, 100], textColor: 255, halign: 'center' },
+      bodyStyles: { fontSize: 9, valign: 'middle' },
+      columnStyles: {
+        0: { cellWidth: 40 }, // Kriteria
+        1: { cellWidth: 'auto' }, // Variabel
+        2: { cellWidth: 50 }, // Pilihan Level
+        3: { cellWidth: 20 }  // Skor
+      },
+      margin: { left: margin, right: margin }
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+  });
+
+  // =====================================================================
+  // REKAP NILAI (Dengan Rowspan per Tabel & Total Tabel)
+  // =====================================================================
+  checkPageBreak(30); // Memastikan ada cukup ruang untuk Rekap
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(0);
+  doc.text('Rekapitulasi Nilai Akhir', margin, y);
+  y += 5;
+
+  const rekapHead = [['No', 'Tabel', 'Kriteria', 'Subtotal', 'Total Tabel']];
+  const rekapBody = [];
+  let tableNo = 1;
+
+  sections.forEach((sec) => {
+    const rowCount = sec.criteria.length;
+    // Hitung total dari subtotal pada satu tabel
+    const totalTable = sec.criteria.reduce((sum, crit) => sum + Number(crit.subtotal), 0);
+
+    sec.criteria.forEach((crit, idx) => {
+      let row = [];
+      
+      // Baris pertama sebuah tabel diberi efek rowspan
+      if (idx === 0) {
+        row.push({ content: String(tableNo), rowSpan: rowCount, styles: { halign: 'center', valign: 'middle' } });
+        row.push({ content: sec.name, rowSpan: rowCount, styles: { valign: 'middle', fontStyle: 'bold' } });
+        row.push(crit.name);
+        row.push({ content: Number(crit.subtotal).toFixed(2), styles: { halign: 'center' } });
+        row.push({ content: totalTable.toFixed(2), rowSpan: rowCount, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } });
+        tableNo++;
+      } else {
+        // Baris berikutnya, lewati sel yang di-rowspan
+        row.push(crit.name);
+        row.push({ content: Number(crit.subtotal).toFixed(2), styles: { halign: 'center' } });
+      }
+      rekapBody.push(row);
     });
   });
 
-  // Tabel Rekap Kriteria & Subtotal
-  checkPageBreak(20);
-  y += 4;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('Rekap Nilai', margin, y);
-  y += 7;
+  // Tambahkan baris Total Keseluruhan paling bawah
+  rekapBody.push([
+    { content: 'TOTAL NILAI KESELURUHAN', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: [200, 147, 62], textColor: 255 } },
+    { content: Number(total).toFixed(2), styles: { halign: 'center', fontStyle: 'bold', fillColor: [200, 147, 62], textColor: 255 } }
+  ]);
 
-  const colWidths = { no: 12, table: 45, kriteria: 78, subtotal: 30 };
-  const tableWidth = colWidths.no + colWidths.table + colWidths.kriteria + colWidths.subtotal;
-  const rowHeight = 8;
-
-  const drawTableHeader = () => {
-    checkPageBreak(rowHeight + 2);
-    doc.setFillColor(23, 32, 58);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.rect(margin, y, tableWidth, rowHeight, 'F');
-
-    let cx = margin;
-    doc.text('No', cx + 2, y + rowHeight / 2 + 1.5);
-    cx += colWidths.no;
-    doc.text('Tabel', cx + 2, y + rowHeight / 2 + 1.5);
-    cx += colWidths.table;
-    doc.text('Kriteria', cx + 2, y + rowHeight / 2 + 1.5);
-    cx += colWidths.kriteria;
-    doc.text('Subtotal', cx + 2, y + rowHeight / 2 + 1.5);
-
-    doc.setTextColor(0, 0, 0);
-    y += rowHeight;
-  };
-
-  const drawTableRow = (rowNumber, tableName, criteriaName, subtotalValue, isEven) => {
-    checkPageBreak(rowHeight + 2);
-    if (isEven) {
-      doc.setFillColor(245, 246, 248);
-      doc.rect(margin, y, tableWidth, rowHeight, 'F');
-    }
-    doc.setDrawColor(220, 220, 220);
-    doc.rect(margin, y, tableWidth, rowHeight);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-
-    let cx = margin;
-    doc.text(String(rowNumber), cx + 2, y + rowHeight / 2 + 1.5);
-    cx += colWidths.no;
-
-    const wrappedTable = doc.splitTextToSize(tableName, colWidths.table - 4);
-    doc.text(wrappedTable[0] || '', cx + 2, y + rowHeight / 2 + 1.5);
-    cx += colWidths.table;
-
-    const wrappedKriteria = doc.splitTextToSize(criteriaName, colWidths.kriteria - 4);
-    doc.text(wrappedKriteria[0] || '', cx + 2, y + rowHeight / 2 + 1.5);
-    cx += colWidths.kriteria;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(Number(subtotalValue).toFixed(2), cx + 2, y + rowHeight / 2 + 1.5);
-
-    y += rowHeight;
-  };
-
-  drawTableHeader();
-
-  let rowNumber = 1;
-  sections.forEach(({ name: tableName, criteria: criteriaList }) => {
-    criteriaList.forEach(({ name: criteriaName, subtotal }) => {
-      drawTableRow(rowNumber, tableName, criteriaName, subtotal, rowNumber % 2 === 0);
-      rowNumber++;
-    });
+  autoTable(doc, {
+    head: rekapHead,
+    body: rekapBody,
+    startY: y,
+    theme: 'grid',
+    headStyles: { fillColor: [23, 32, 58], textColor: 255, halign: 'center' },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: {
+      0: { cellWidth: 12 }, // No
+      1: { cellWidth: 45 }, // Tabel
+      2: { cellWidth: 65 }, // Kriteria
+      3: { cellWidth: 25 }, // Subtotal
+      4: { cellWidth: 33 }  // Total Tabel
+    },
+    // Menambahkan efek garis tegas batas antar tabel (opsional, seperti sebelumnya)
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.row.index > 0 && data.column.index === 0) {
+        const rawContent = data.cell.raw.content;
+        if (rawContent && !isNaN(rawContent)) { // Jika ini awal baris rowspan yang ada Nomor-nya
+          doc.setDrawColor(100, 100, 100);
+          doc.setLineWidth(0.4);
+          doc.line(data.cell.x, data.cell.y, pageWidth - margin, data.cell.y);
+        }
+      }
+    },
+    margin: { left: margin, right: margin }
   });
 
-  checkPageBreak(rowHeight + 2);
-  doc.setFillColor(200, 147, 62);
-  doc.setTextColor(255, 255, 255);
-  doc.rect(margin, y, tableWidth, rowHeight, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('Total', margin + colWidths.no + colWidths.table + 2, y + rowHeight / 2 + 1.5);
-  doc.text(Number(total).toFixed(2), margin + colWidths.no + colWidths.table + colWidths.kriteria + 2, y + rowHeight / 2 + 1.5);
-  doc.setTextColor(0, 0, 0);
-
+  // Simpan Dokumen
   doc.save(fileName);
 }
 
-// ---------- HALAMAN USER (AssessmentResult.jsx) ----------
+// ---------- HALAMAN USER & MODAL ADMIN (Tetap Sama, Tidak Perlu Diubah) ----------
 export async function userHistoryPdfExport({ assessment, variables, criteria, tables, baseUrl }) {
   const variableMap = {};
   variables.forEach(v => { variableMap[v.id] = v; });
@@ -287,7 +320,6 @@ export async function userHistoryPdfExport({ assessment, variables, criteria, ta
   });
 }
 
-// ---------- MODAL ADMIN (AdminAssessments.jsx) ----------
 export async function adminAssessmentPdfExport({ item, tableMap, criteriaMap, variableMap, baseUrl }) {
   const { subtotals = {}, total = 0, details = [] } = item.results || {};
 

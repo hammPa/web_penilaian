@@ -27,8 +27,31 @@ function getColorForScore(score) {
   return range ? range.color : '#94A3B8';
 }
 
-const ROW_HEIGHT = 32; // tinggi per baris agar nama & bar tidak berdempetan
+// 1. Tinggi baris diperbesar agar teks yang turun ke bawah tidak tumpang tindih
+const ROW_HEIGHT = 48; 
 const MIN_CHART_HEIGHT = 320;
+
+// 2. Lebar maksimal untuk teks Y-Axis sebelum dipaksa turun ke bawah
+const Y_AXIS_WIDTH = 130; 
+
+// 3. Komponen Custom Y-Axis untuk membungkus SVG dengan HTML biasa
+const CustomYAxisTick = ({ x, y, payload }) => {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {/* y={-24} adalah setengah dari tinggi div (48) agar posisinya persis di tengah bar */}
+      <foreignObject x={-Y_AXIS_WIDTH} y={-24} width={Y_AXIS_WIDTH - 10} height={48}>
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          className="w-full h-full flex items-center justify-end text-right text-[11px] font-medium text-[#17203A] leading-[1.2]"
+          style={{ wordBreak: 'break-word' }}
+        >
+          {/* line-clamp akan membatasi baris jika ekstrim (misal kepanjangan) */}
+          <span className="line-clamp-3">{payload.value}</span>
+        </div>
+      </foreignObject>
+    </g>
+  );
+};
 
 export default function TopSkorChart({ barData }) {
   const chartHeight = Math.max(MIN_CHART_HEIGHT, (barData?.length || 0) * ROW_HEIGHT);
@@ -45,7 +68,7 @@ export default function TopSkorChart({ barData }) {
               <ReBarChart
                 layout="vertical"
                 data={barData}
-                margin={{ top: 5, right: 40, left: 30, bottom: 5 }}
+                margin={{ top: 5, right: 40, left: 10, bottom: 5 }} // Left disesuaikan
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
                 <XAxis
@@ -58,10 +81,10 @@ export default function TopSkorChart({ barData }) {
                 <YAxis
                   type="category"
                   dataKey="name"
-                  tick={{ fontSize: 11, fill: '#17203A', fontWeight: 500 }}
+                  tick={<CustomYAxisTick />} // Pasang komponen Custom di sini
                   axisLine={false}
                   tickLine={false}
-                  width={80}
+                  width={Y_AXIS_WIDTH} // Terapkan lebar yang telah di-setting
                   interval={0}
                 />
                 <Tooltip cursor={{ fill: '#F8FAFC' }} />

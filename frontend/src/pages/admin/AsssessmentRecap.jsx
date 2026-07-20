@@ -46,6 +46,16 @@ export default function AssessmentRecap() {
           variableService.getAll()
         ]);
 
+        // 1. URUTKAN DATA SESI SECARA NUMERIK/ALFABET
+        sessData.sort((a, b) => 
+          (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+        );
+
+        // 2. URUTKAN DATA TIM SECARA NUMERIK/ALFABET
+        teamData.sort((a, b) => 
+          (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+        );
+
         setSessions(sessData);
         setTeams(teamData);
         setGroups(groupData);
@@ -55,6 +65,7 @@ export default function AssessmentRecap() {
         setCriteria(criteriaData);
         setVariables(variableData);
 
+        // Karena sudah diurutkan, index 0 akan selalu mengambil sesi paling pertama secara logis
         if (sessData.length > 0) setSelectedSessionId(sessData[0].id);
         setSelectedTeamId('all');
       } catch (err) {
