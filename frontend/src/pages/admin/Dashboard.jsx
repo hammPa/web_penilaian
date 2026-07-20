@@ -10,19 +10,21 @@ import groupService from '../../services/groupService';
 import teamService from '../../services/teamService';
 import sessionService from '../../services/sessionService';
 
-// Import Recharts
-import { PieChart, Pie, Cell, BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { LayoutGrid, ClipboardList, FileCheck2, FilePlus2, Wrench, Calendar } from 'lucide-react';
+// Chart-chart dipisah menjadi komponen tersendiri
+import StatusPengisianChart from '../../components/dashboard/StatusPengisianChart';
+import StatusPengisianGrupChart from '../../components/dashboard/StatusPengisianGrupChart';
+import SebaranNilaiChart from '../../components/dashboard/SebaranNilaiChart';
+import TopSkorChart from '../../components/dashboard/TopSkorChart';
+
+import { LayoutGrid, ClipboardList, FileCheck2, FilePlus2, Wrench, Calendar, Users } from 'lucide-react';
 
 const statConfig = [
   { key: 'tableCount', label: 'Total Tabel', icon: <LayoutGrid /> },
   { key: 'criteriaCount', label: 'Total Kriteria', icon: <ClipboardList /> },
   { key: 'variableCount', label: 'Total Variabel', icon: <Wrench /> },
+  { key: 'groupCount', label: 'Total Grup (Akan Dinilai)', icon: <Users /> },
   { key: 'assessmentCount', label: 'Total Penilaian', icon: <FileCheck2 /> },
 ];
-
-// Sudah Lengkap (hijau), Belum Lengkap (kuning/amber), Belum Isi Sama Sekali (merah)
-const COLORS = ['#0F9D6D', '#C8933E', '#C1443A'];
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -55,11 +57,22 @@ export default function AdminDashboard() {
           return total;
         }, 0);
 
+        // Total Grup yang "akan dinilai": grup dihitung hanya jika timnya
+        // punya minimal 1 calon penilai (user non-admin di tim yang sama).
+        // TIDAK dipengaruhi filter sesi, karena grup & tim tidak punya
+        // atribut session/semester (cuma assessment yang punya sessionId).
+        const participantUsersAll = users.filter(u => u.role !== 'admin');
+        const groupCount = groups.filter(g => {
+          const targetAssessorCount = participantUsersAll.filter(u => u.teamId === g.teamId).length;
+          return targetAssessorCount > 0;
+        }).length;
+
         setRawData({
           tables, criteria, variables, assessments, users, groups, teams,
           tableCount: tables.length,
           criteriaCount: criteria.length,
           variableCount: actualVariableCount,
+          groupCount,
           assessmentCount: assessments.length
         });
 
@@ -140,26 +153,113 @@ export default function AdminDashboard() {
       { name: 'Belum Isi', value: belumIsiList.length }
     ];
 
-    // Top 10 Nilai Tertinggi (per sesi terpilih, karena berbasis filteredAssessments)
-    const userMaxScores = {};
-    filteredAssessments.forEach(a => {
-      const currentMax = userMaxScores[a.userId] || 0;
-      const totalScore = a.results?.total || 0;
-      if (totalScore > currentMax) {
-        userMaxScores[a.userId] = totalScore;
-      }
+    // Status pengisian GRUP (untuk pie chart 2 kategori + daftar nama grup).
+    // Berbeda dari status per user: satu grup dianggap "Sudah Dinilai" jika
+    // MINIMAL SATU juri/peserta sudah mengisi, tidak peduli berapa target
+    // penilai untuk grup itu. Target penilai = jumlah user non-admin di tim
+    // yang sama dengan grup; grup dengan target = 0 (tidak ada penilai
+    // tersedia) dikecualikan dari perhitungan.
+    const sudahDinilaiList = [];
+    const belumDinilaiList = [];
+
+    teams.forEach(team => {
+      const teamGroups = groups.filter(g => g.teamId === team.id);
+      const targetAssessorCount = participantUsers.filter(u => u.teamId === team.id).length;
+
+      teamGroups.forEach(g => {
+        if (targetAssessorCount === 0) return; // tidak ada penilai tersedia, skip dari perhitungan
+
+        const assessorIds = new Set(
+          filteredAssessments.filter(a => a.groupId === g.id).map(a => a.userId)
+        );
+        const assessedCount = assessorIds.size;
+        const name = g.name || 'Grup Tanpa Nama';
+        const teamName = team.name || 'Tim Tidak Diketahui';
+
+        if (assessedCount > 0) {
+          sudahDinilaiList.push({ name, teamName, assessedCount });
+        } else {
+          belumDinilaiList.push({ name, teamName });
+        }
+      });
     });
 
-    const barData = Object.entries(userMaxScores)
-      .map(([userId, maxScore]) => {
-        const user = users.find(u => u.id === userId);
-        return {
-          name: user?.name || 'User Tanpa Nama',
-          Skor: Number(maxScore.toFixed(2))
-        };
-      })
-      .sort((a, b) => b.Skor - a.Skor)
-      .slice(0, 10); // Top 10 sesuai sesi terpilih
+    sudahDinilaiList.sort((a, b) => a.name.localeCompare(b.name));
+    belumDinilaiList.sort((a, b) => a.name.localeCompare(b.name));
+
+    const groupPieData = [
+      { name: 'Sudah Dinilai', value: sudahDinilaiList.length },
+      { name: 'Belum Dinilai', value: belumDinilaiList.length }
+    ];
+
+    // Sebaran Nilai: berbasis SEMUA GRUP (universe sama dengan "Total Grup
+    // Akan Dinilai" & chart Status Pengisian Grup), bukan per submission
+    // assessment. Tiap grup diwakili SATU nilai = RATA-RATA skor dari semua
+    // penilai (kalau penilai cuma 1, hasilnya = skor itu sendiri; kalau
+    // lebih dari 1, dijumlah lalu dibagi jumlah penilai). Grup yang belum
+    // ada satupun assessment masuk -> dihitung skor 0 (masuk kriteria 0 - 20).
+    const scoreBuckets = {
+      '80 - 100': 0,
+      '60 - 80': 0,
+      '40 - 60': 0,
+      '20 - 40': 0,
+      '0 - 20': 0,
+    };
+
+    teams.forEach(team => {
+      const teamGroups = groups.filter(g => g.teamId === team.id);
+      const targetAssessorCount = participantUsers.filter(u => u.teamId === team.id).length;
+
+      teamGroups.forEach(g => {
+        if (targetAssessorCount === 0) return; // grup tanpa calon penilai, skip dari perhitungan (sama dgn Total Grup)
+
+        const groupScores = filteredAssessments
+          .filter(a => a.groupId === g.id)
+          .map(a => a.results?.total || 0);
+        const groupScore = groupScores.length > 0
+          ? groupScores.reduce((sum, s) => sum + s, 0) / groupScores.length
+          : 0;
+
+        if (groupScore >= 80) scoreBuckets['80 - 100']++;
+        else if (groupScore >= 60) scoreBuckets['60 - 80']++;
+        else if (groupScore >= 40) scoreBuckets['40 - 60']++;
+        else if (groupScore >= 20) scoreBuckets['20 - 40']++;
+        else scoreBuckets['0 - 20']++;
+      });
+    });
+
+    const sebaranNilaiPieData = Object.entries(scoreBuckets).map(([name, value]) => ({ name, value }));
+    const totalNilai = Object.values(scoreBuckets).reduce((sum, v) => sum + v, 0);
+
+    // Nilai per GRUP (bukan per user/juri lagi). Basis grup sama dengan
+    // chart Status Pengisian Grup & Sebaran Nilai: grup dihitung hanya jika
+    // timnya punya minimal 1 calon penilai. Grup yang belum ada assessment
+    // sama sekali tetap masuk daftar dengan skor 0. Nilai grup = RATA-RATA
+    // skor dari semua penilai (kalau penilai cuma 1, hasilnya = skor itu
+    // sendiri; kalau lebih dari 1, dijumlah lalu dibagi jumlah penilai).
+    const barData = [];
+    teams.forEach(team => {
+      const teamGroups = groups.filter(g => g.teamId === team.id);
+      const targetAssessorCount = participantUsers.filter(u => u.teamId === team.id).length;
+
+      teamGroups.forEach(g => {
+        if (targetAssessorCount === 0) return; // grup tanpa calon penilai, skip
+
+        const groupScores = filteredAssessments
+          .filter(a => a.groupId === g.id)
+          .map(a => a.results?.total || 0);
+        const avgScore = groupScores.length > 0
+          ? groupScores.reduce((sum, s) => sum + s, 0) / groupScores.length
+          : 0;
+
+        barData.push({
+          name: g.name || 'Grup Tanpa Nama',
+          Skor: Number(avgScore.toFixed(2))
+        });
+      });
+    });
+
+    barData.sort((a, b) => b.Skor - a.Skor); // Semua grup diurutkan, tidak dibatasi 10
 
     return {
       recentAssessments,
@@ -168,8 +268,14 @@ export default function AdminDashboard() {
       lengkapList,
       belumLengkapList,
       belumIsiList,
+      groupPieData,
+      sudahDinilaiList,
+      belumDinilaiList,
+      sebaranNilaiPieData,
+      totalNilai,
       totalAssessmentFiltered: filteredAssessments.length,
-      totalParticipants: lengkapList.length + belumLengkapList.length + belumIsiList.length
+      totalParticipants: lengkapList.length + belumLengkapList.length + belumIsiList.length,
+      totalGroups: sudahDinilaiList.length + belumDinilaiList.length
     };
   }, [rawData, selectedSession]);
 
@@ -202,7 +308,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* CARD STATISTIK */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6 mb-6">
         {statConfig.map(({ key, label, icon }) => (
           <Card key={key} className="p-4 md:p-6">
             <div className="flex flex-col items-center text-center gap-2 md:flex-row md:items-center md:text-left md:gap-4">
@@ -220,155 +326,30 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* PANEL GRAFIK ANALISIS DATA */}
+      {/* PANEL STATUS PENGISIAN: PER USER, PER GRUP, & SEBARAN NILAI */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Pie Chart Status Pengisian */}
-        <Card className="p-4 md:p-6 lg:col-span-1 flex flex-col justify-start">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400 mb-4">
-            Status Pengisian Peserta
-          </p>
-          <div className="h-64 w-full flex items-center justify-center relative">
-            {processedData?.pieData.some(d => d.value > 0) ? (
-              <>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={processedData.pieData}
-                      cx="50%"
-                      cy="45%"
-                      innerRadius={60}
-                      outerRadius={85}
-                      paddingAngle={4}
-                      dataKey="value"
-                    >
-                      {processedData.pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value} User`, 'Jumlah']} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                  </PieChart>
-                </ResponsiveContainer>
+        <StatusPengisianChart
+          pieData={processedData?.pieData}
+          lengkapList={processedData?.lengkapList}
+          belumLengkapList={processedData?.belumLengkapList}
+          belumIsiList={processedData?.belumIsiList}
+          totalParticipants={processedData?.totalParticipants}
+        />
+        <StatusPengisianGrupChart
+          pieData={processedData?.groupPieData}
+          sudahList={processedData?.sudahDinilaiList}
+          belumList={processedData?.belumDinilaiList}
+          totalGroups={processedData?.totalGroups}
+        />
+        <SebaranNilaiChart
+          pieData={processedData?.sebaranNilaiPieData}
+          totalNilai={processedData?.totalNilai}
+        />
+      </div>
 
-                {/* 1. Overlay Persentase: Pas di tengah lingkaran */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-[10%]">
-                  <p className="font-serif text-3xl font-bold text-[#17203A] leading-none">
-                    {processedData.totalParticipants > 0
-                      ? Math.round((processedData.lengkapList.length / processedData.totalParticipants) * 100)
-                      : 0}%
-                  </p>
-                </div>
-
-                {/* 2. Overlay Teks Pecahan: Di luar lingkaran, di atas legend */}
-                <div className="absolute inset-x-0 bottom-[40px] flex items-center justify-center pointer-events-none">
-                  <p className="text-xs font-medium text-slate-500">
-                    {processedData.lengkapList.length} / {processedData.totalParticipants} Selesai
-                  </p>
-                </div>
-              </>
-            ) : (
-              <p className="text-xs text-slate-400">Tidak ada aktivitas pada sesi ini</p>
-            )}
-          </div>
-
-          {/* Daftar nama peserta: 3 kolom - Belum Isi, Belum Lengkap, Lengkap */}
-          <div className="mt-2 pt-3 border-t border-slate-100 grid grid-cols-3 gap-2">
-            {/* Kolom Belum Isi */}
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#C1443A] mb-1.5">
-                Belum Isi ({processedData?.belumIsiList?.length || 0})
-              </p>
-              <div className="max-h-48 overflow-y-auto pr-1 space-y-1">
-                {processedData?.belumIsiList?.length > 0 ? (
-                  processedData.belumIsiList.map((name, i) => (
-                    <div key={i} className="text-[11px] text-slate-600 flex items-start gap-1">
-                      <span className="w-1.5 h-1.5 mt-1 rounded-full bg-[#C1443A]/60 shrink-0" />
-                      <span className="break-words">{name}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-[11px] text-slate-300">-</p>
-                )}
-              </div>
-            </div>
-
-            {/* Kolom Belum Lengkap */}
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#C8933E] mb-1.5">
-                Belum Lengkap ({processedData?.belumLengkapList?.length || 0})
-              </p>
-              <div className="max-h-48 overflow-y-auto pr-1 space-y-1">
-                {processedData?.belumLengkapList?.length > 0 ? (
-                  processedData.belumLengkapList.map((item, i) => (
-                    <div key={i} className="text-[11px] text-slate-600 flex items-start gap-1">
-                      <span className="w-1.5 h-1.5 mt-1 rounded-full bg-[#C8933E]/60 shrink-0" />
-                      <span className="break-words">
-                        {item.name}{' '}
-                        <span className="text-slate-400">({item.assessedCount}/{item.targetCount})</span>
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-[11px] text-slate-300">-</p>
-                )}
-              </div>
-            </div>
-
-            {/* Kolom Lengkap */}
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0F9D6D] mb-1.5">
-                Lengkap ({processedData?.lengkapList?.length || 0})
-              </p>
-              <div className="max-h-48 overflow-y-auto pr-1 space-y-1">
-                {processedData?.lengkapList?.length > 0 ? (
-                  processedData.lengkapList.map((name, i) => (
-                    <div key={i} className="text-[11px] text-slate-600 flex items-start gap-1">
-                      <span className="w-1.5 h-1.5 mt-1 rounded-full bg-[#0F9D6D]/60 shrink-0" />
-                      <span className="break-words">{name}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-[11px] text-slate-300">-</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Bar Chart Horizontal Top 10 Nilai Tertinggi (per sesi terpilih) */}
-        <Card className="p-4 md:p-6 lg:col-span-2">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400 mb-4">
-            Top 10 Nilai Tertinggi User
-          </p>
-          <div className="h-80 w-full">
-            {processedData?.barData && processedData.barData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ReBarChart
-                  layout="vertical"
-                  data={processedData.barData}
-                  margin={{ top: 5, right: 20, left: 30, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fontSize: 11, fill: '#17203A', fontWeight: 500 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={80}
-                  />
-                  <Tooltip cursor={{ fill: '#F8FAFC' }} />
-                  <Bar dataKey="Skor" fill="#C8933E" radius={[0, 4, 4, 0]} barSize={16} />
-                </ReBarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-xs text-slate-400">Belum ada skor yang masuk pada sesi ini</p>
-              </div>
-            )}
-          </div>
-        </Card>
+      {/* PANEL RATA-RATA NILAI SEMUA GRUP */}
+      <div className="mb-6">
+        <TopSkorChart barData={processedData?.barData} />
       </div>
 
       {/* DAFTAR AKTIVITAS TERBARU */}

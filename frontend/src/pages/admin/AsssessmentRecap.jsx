@@ -130,6 +130,7 @@ export default function AssessmentRecap() {
       return {
         name: u?.name || 'Unknown',
         score: a.results?.total || 0,
+        recommendation: a.recommendation || '',
         perTable,
         perCriteria,
         perVariable
