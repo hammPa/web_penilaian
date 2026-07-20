@@ -5,9 +5,9 @@ class VariableController {
   async getAll(req, res, next) {
     try {
       const { criteriaId } = req.query;
-      const data = criteriaId 
-        ? variableService.getByCriteriaId(criteriaId)
-        : variableService.getAll();
+      const data = criteriaId
+        ? await variableService.getByCriteriaId(criteriaId)
+        : await variableService.getAll();
       success(res, data);
     } catch (err) {
       next(err);
@@ -16,7 +16,7 @@ class VariableController {
 
   async getById(req, res, next) {
     try {
-      const data = variableService.getById(req.params.id);
+      const data = await variableService.getById(req.params.id);
       success(res, data);
     } catch (err) {
       next(err);
@@ -25,7 +25,7 @@ class VariableController {
 
   async create(req, res, next) {
     try {
-      const data = variableService.create(req.body);
+      const data = await variableService.create(req.body);
       success(res, data, 'Variabel berhasil dibuat', 201);
     } catch (err) {
       next(err);
@@ -34,7 +34,7 @@ class VariableController {
 
   async update(req, res, next) {
     try {
-      const data = variableService.update(req.params.id, req.body);
+      const data = await variableService.update(req.params.id, req.body);
       success(res, data, 'Variabel berhasil diperbarui');
     } catch (err) {
       next(err);
@@ -43,7 +43,7 @@ class VariableController {
 
   async delete(req, res, next) {
     try {
-      const result = variableService.delete(req.params.id);
+      const result = await variableService.delete(req.params.id);
       success(res, result, 'Variabel berhasil dihapus');
     } catch (err) {
       next(err);

@@ -5,7 +5,7 @@ const userRepository = require('../repositories/UserRepository');
 
 class AuthService {
   async login(username, password) {
-    const user = userRepository.findByUsername(username);
+    const user = await userRepository.findByUsername(username);
     if (!user) {
       throw { status: 401, message: 'Username atau password salah' };
     }
@@ -21,7 +21,7 @@ class AuthService {
       { expiresIn: '24h' }
     );
 
-    userRepository.update(user.id, { activeToken: token });
+    await userRepository.update(user.id, { activeToken: token });
 
     return {
       token,
@@ -34,7 +34,7 @@ class AuthService {
   }
 
   async getUserById(id) {
-    const user = userRepository.findById(id);
+    const user = await userRepository.findById(id);
     if (!user) return null;
     const { password, activeToken, ...safeUser } = user;
     return safeUser;

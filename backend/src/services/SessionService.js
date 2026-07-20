@@ -5,20 +5,19 @@ const criteriaRepository = require('../repositories/CriteriaRepository');
 const variableRepository = require('../repositories/VariableRepository');
 
 class SessionService {
-  getAll() {
+  async getAll() {
     // Terbaru duluan biar landing page enak dibaca
-    return sessionRepository.findAll().sort((a, b) =>
-      new Date(b.createdAt) - new Date(a.createdAt)
-    );
+    const all = await sessionRepository.findAll();
+    return all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
-  getById(id) {
-    const session = sessionRepository.findById(id);
+  async getById(id) {
+    const session = await sessionRepository.findById(id);
     if (!session) throw { status: 404, message: 'Sesi tidak ditemukan' };
     return session;
   }
 
-  create(data) {
+  async create(data) {
     if (!data.name) {
       throw { status: 400, message: 'Nama sesi wajib diisi' };
     }
@@ -31,8 +30,8 @@ class SessionService {
     return sessionRepository.create(newSession);
   }
 
-  update(id, data) {
-    const existing = this.getById(id);
+  async update(id, data) {
+    const existing = await this.getById(id);
     const updated = {
       name: data.name || existing.name,
       description: data.description !== undefined ? data.description : existing.description,
@@ -41,19 +40,22 @@ class SessionService {
     return sessionRepository.update(id, updated);
   }
 
-  delete(id) {
-    this.getById(id);
+  async delete(id) {
+    await this.getById(id);
     // Cascade penuh: hapus semua Tabel->Kriteria->Variabel milik sesi ini
-    const tables = tableRepository.findBySessionId(id);
-    tables.forEach(t => {
-      const criteriaList = criteriaRepository.findByTableId(t.id);
-      criteriaList.forEach(c => {
-        variableRepository.findByCriteriaId(c.id).forEach(v => variableRepository.delete(v.id));
-        criteriaRepository.delete(c.id);
-      });
-      tableRepository.delete(t.id);
-    });
-    sessionRepository.delete(id);
+    const tables = await tableRepository.findBySessionId(id);
+    for (const t of tables) {
+      const criteriaList = await criteriaRepository.findByTableId(t.id);
+      for (const c of criteriaList) {
+        const vars = await variableRepository.findByCriteriaId(c.id);
+        for (const v of vars) {
+          await variableRepository.delete(v.id);
+        }
+        await criteriaRepository.delete(c.id);
+      }
+      await tableRepository.delete(t.id);
+    }
+    await sessionRepository.delete(id);
     return { message: 'Sesi berhasil dihapus' };
   }
 
@@ -62,8 +64,8 @@ class SessionService {
    * ke sesi baru. ID lama di-remap ke ID baru supaya tidak nabrak/berbagi
    * referensi dengan sesi sumbernya.
    */
-  duplicate(sourceSessionId, data) {
-    const sourceSession = this.getById(sourceSessionId);
+  async duplicate(sourceSessionId, data) {
+    const sourceSession = await this.getById(sourceSessionId);
     if (!data.name) {
       throw { status: 400, message: 'Nama sesi baru wajib diisi' };
     }
@@ -74,32 +76,32 @@ class SessionService {
       description: data.description || `Duplikat dari ${sourceSession.name}`,
       createdAt: new Date().toISOString()
     };
-    sessionRepository.create(newSession);
+    await sessionRepository.create(newSession);
 
-    const sourceTables = tableRepository.findBySessionId(sourceSessionId);
+    const sourceTables = await tableRepository.findBySessionId(sourceSessionId);
 
-    sourceTables.forEach(oldTable => {
+    for (const oldTable of sourceTables) {
       const newTableId = uuidv4();
-      tableRepository.create({
+      await tableRepository.create({
         id: newTableId,
         name: oldTable.name,
         description: oldTable.description,
         sessionId: newSession.id
       });
 
-      const oldCriteriaList = criteriaRepository.findByTableId(oldTable.id);
-      oldCriteriaList.forEach(oldCriteria => {
+      const oldCriteriaList = await criteriaRepository.findByTableId(oldTable.id);
+      for (const oldCriteria of oldCriteriaList) {
         const newCriteriaId = uuidv4();
-        criteriaRepository.create({
+        await criteriaRepository.create({
           id: newCriteriaId,
           name: oldCriteria.name,
           description: oldCriteria.description,
           tableId: newTableId
         });
 
-        const oldVariables = variableRepository.findByCriteriaId(oldCriteria.id);
-        oldVariables.forEach(oldVariable => {
-          variableRepository.create({
+        const oldVariables = await variableRepository.findByCriteriaId(oldCriteria.id);
+        for (const oldVariable of oldVariables) {
+          await variableRepository.create({
             id: uuidv4(),
             name: oldVariable.name,
             criteriaId: newCriteriaId,
@@ -107,9 +109,9 @@ class SessionService {
             formula: oldVariable.formula,
             variables: (oldVariable.variables || []).map(v => ({ description: v.description }))
           });
-        });
-      });
-    });
+        }
+      }
+    }
 
     return newSession;
   }

@@ -4,28 +4,28 @@ const tableRepository = require('../repositories/TableRepository');
 const variableRepository = require('../repositories/VariableRepository');
 
 class CriteriaService {
-  getAll() {
+  async getAll() {
     return criteriaRepository.findAll();
   }
 
-  getByTableId(tableId) {
+  async getByTableId(tableId) {
     // pastikan tabel ada
-    const table = tableRepository.findById(tableId);
+    const table = await tableRepository.findById(tableId);
     if (!table) throw { status: 404, message: 'Tabel tidak ditemukan' };
     return criteriaRepository.findByTableId(tableId);
   }
 
-  getById(id) {
-    const criteria = criteriaRepository.findById(id);
+  async getById(id) {
+    const criteria = await criteriaRepository.findById(id);
     if (!criteria) throw { status: 404, message: 'Kriteria tidak ditemukan' };
     return criteria;
   }
 
-  create(data) {
+  async create(data) {
     if (!data.name || !data.tableId) {
       throw { status: 400, message: 'Nama dan tabel wajib diisi' };
     }
-    const table = tableRepository.findById(data.tableId);
+    const table = await tableRepository.findById(data.tableId);
     if (!table) throw { status: 404, message: 'Tabel tidak ditemukan' };
 
     const newCriteria = {
@@ -37,10 +37,10 @@ class CriteriaService {
     return criteriaRepository.create(newCriteria);
   }
 
-  update(id, data) {
-    const existing = this.getById(id);
+  async update(id, data) {
+    const existing = await this.getById(id);
     if (data.tableId) {
-      const table = tableRepository.findById(data.tableId);
+      const table = await tableRepository.findById(data.tableId);
       if (!table) throw { status: 404, message: 'Tabel tidak ditemukan' };
     }
     const updated = {
@@ -51,11 +51,14 @@ class CriteriaService {
     return criteriaRepository.update(id, updated);
   }
 
-  delete(id) {
-    this.getById(id);
+  async delete(id) {
+    await this.getById(id);
     // Hapus juga variabel di bawah kriteria ini (cascade)
-    variableRepository.findByCriteriaId(id).forEach(v => variableRepository.delete(v.id));
-    criteriaRepository.delete(id);
+    const vars = await variableRepository.findByCriteriaId(id);
+    for (const v of vars) {
+      await variableRepository.delete(v.id);
+    }
+    await criteriaRepository.delete(id);
     return { message: 'Kriteria berhasil dihapus' };
   }
 }

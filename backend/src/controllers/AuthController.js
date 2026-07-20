@@ -32,8 +32,8 @@ class AuthController {
     try {
       // Hapus activeToken dari database
       const userRepository = require('../repositories/UserRepository');
-      userRepository.update(req.user.id, { activeToken: null });
-      
+      await userRepository.update(req.user.id, { activeToken: null });
+
       success(res, null, 'Logout berhasil');
     } catch (err) {
       next(err);

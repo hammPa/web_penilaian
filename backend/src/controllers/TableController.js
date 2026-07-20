@@ -6,8 +6,8 @@ class TableController {
     try {
       const { sessionId } = req.query;
       const data = sessionId
-        ? tableService.getBySessionId(sessionId)
-        : tableService.getAll();
+        ? await tableService.getBySessionId(sessionId)
+        : await tableService.getAll();
       success(res, data);
     } catch (err) {
       next(err);
@@ -16,7 +16,7 @@ class TableController {
 
   async getById(req, res, next) {
     try {
-      const data = tableService.getById(req.params.id);
+      const data = await tableService.getById(req.params.id);
       success(res, data);
     } catch (err) {
       next(err);
@@ -25,7 +25,7 @@ class TableController {
 
   async create(req, res, next) {
     try {
-      const data = tableService.create(req.body);
+      const data = await tableService.create(req.body);
       success(res, data, 'Tabel berhasil dibuat', 201);
     } catch (err) {
       next(err);
@@ -34,7 +34,7 @@ class TableController {
 
   async update(req, res, next) {
     try {
-      const data = tableService.update(req.params.id, req.body);
+      const data = await tableService.update(req.params.id, req.body);
       success(res, data, 'Tabel berhasil diperbarui');
     } catch (err) {
       next(err);
@@ -43,7 +43,7 @@ class TableController {
 
   async delete(req, res, next) {
     try {
-      const result = tableService.delete(req.params.id);
+      const result = await tableService.delete(req.params.id);
       success(res, result, 'Tabel berhasil dihapus');
     } catch (err) {
       next(err);

@@ -5,30 +5,30 @@ const variableRepository = require('../repositories/VariableRepository');
 const sessionRepository = require('../repositories/SessionRepository');
 
 class TableService {
-  getAll() {
+  async getAll() {
     return tableRepository.findAll();
   }
 
-  getBySessionId(sessionId) {
-    const session = sessionRepository.findById(sessionId);
+  async getBySessionId(sessionId) {
+    const session = await sessionRepository.findById(sessionId);
     if (!session) throw { status: 404, message: 'Sesi tidak ditemukan' };
     return tableRepository.findBySessionId(sessionId);
   }
 
-  getById(id) {
-    const table = tableRepository.findById(id);
+  async getById(id) {
+    const table = await tableRepository.findById(id);
     if (!table) throw { status: 404, message: 'Tabel tidak ditemukan' };
     return table;
   }
 
-  create(data) {
+  async create(data) {
     if (!data.name) {
       throw { status: 400, message: 'Nama tabel wajib diisi' };
     }
     if (!data.sessionId) {
       throw { status: 400, message: 'Sesi wajib dipilih' };
     }
-    const session = sessionRepository.findById(data.sessionId);
+    const session = await sessionRepository.findById(data.sessionId);
     if (!session) throw { status: 404, message: 'Sesi tidak ditemukan' };
 
     const newTable = {
@@ -40,10 +40,10 @@ class TableService {
     return tableRepository.create(newTable);
   }
 
-  update(id, data) {
-    const existing = this.getById(id);
+  async update(id, data) {
+    const existing = await this.getById(id);
     if (data.sessionId) {
-      const session = sessionRepository.findById(data.sessionId);
+      const session = await sessionRepository.findById(data.sessionId);
       if (!session) throw { status: 404, message: 'Sesi tidak ditemukan' };
     }
     const updated = {
@@ -54,15 +54,18 @@ class TableService {
     return tableRepository.update(id, updated);
   }
 
-  delete(id) {
-    this.getById(id);
+  async delete(id) {
+    await this.getById(id);
     // Hapus juga kriteria & variabel di bawah tabel ini (cascade)
-    const criteriaList = criteriaRepository.findByTableId(id);
-    criteriaList.forEach(c => {
-      variableRepository.findByCriteriaId(c.id).forEach(v => variableRepository.delete(v.id));
-      criteriaRepository.delete(c.id);
-    });
-    tableRepository.delete(id);
+    const criteriaList = await criteriaRepository.findByTableId(id);
+    for (const c of criteriaList) {
+      const vars = await variableRepository.findByCriteriaId(c.id);
+      for (const v of vars) {
+        await variableRepository.delete(v.id);
+      }
+      await criteriaRepository.delete(c.id);
+    }
+    await tableRepository.delete(id);
     return { message: 'Tabel berhasil dihapus' };
   }
 }

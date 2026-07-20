@@ -15,7 +15,7 @@ class AssessmentController {
 
   async getAll(req, res, next) {
     try {
-      const data = assessmentService.getAll(req.user.id, req.user.role);
+      const data = await assessmentService.getAll(req.user.id, req.user.role);
       success(res, data);
     } catch (err) {
       next(err);
@@ -24,7 +24,7 @@ class AssessmentController {
 
   async getById(req, res, next) {
     try {
-      const data = assessmentService.getById(req.params.id, req.user.id, req.user.role);
+      const data = await assessmentService.getById(req.params.id, req.user.id, req.user.role);
       success(res, data);
     } catch (err) {
       next(err);

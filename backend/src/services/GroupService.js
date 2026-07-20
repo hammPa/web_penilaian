@@ -3,30 +3,31 @@ const groupRepository = require('../repositories/GroupRepository');
 const teamRepository = require('../repositories/TeamRepository');
 
 class GroupService {
-  getAll() {
-    return groupRepository.findAll() || [];
+  async getAll() {
+    const groups = await groupRepository.findAll();
+    return groups || [];
   }
 
-  getByTeamId(teamId) {
-    const team = teamRepository.findById(teamId);
+  async getByTeamId(teamId) {
+    const team = await teamRepository.findById(teamId);
     if (!team) throw { status: 404, message: 'Tim tidak ditemukan' };
     return groupRepository.findByTeamId(teamId);
   }
 
-  getById(id) {
-    const group = groupRepository.findById(id);
+  async getById(id) {
+    const group = await groupRepository.findById(id);
     if (!group) throw { status: 404, message: 'Grup tidak ditemukan' };
     return group;
   }
 
-  create(data) {
+  async create(data) {
     if (!data.name || !data.gugus) {
       throw { status: 400, message: 'Nama dan Gugus wajib diisi' };
     }
     if (!data.teamId) {
       throw { status: 400, message: 'Tim wajib dipilih' };
     }
-    const team = teamRepository.findById(data.teamId);
+    const team = await teamRepository.findById(data.teamId);
     if (!team) throw { status: 404, message: 'Tim tidak ditemukan' };
 
     const newGroup = {
@@ -38,10 +39,10 @@ class GroupService {
     return groupRepository.create(newGroup);
   }
 
-  update(id, data) {
-    const existing = this.getById(id);
+  async update(id, data) {
+    const existing = await this.getById(id);
     if (data.teamId) {
-      const team = teamRepository.findById(data.teamId);
+      const team = await teamRepository.findById(data.teamId);
       if (!team) throw { status: 404, message: 'Tim tidak ditemukan' };
     }
     const updated = {
@@ -52,9 +53,9 @@ class GroupService {
     return groupRepository.update(id, updated);
   }
 
-  delete(id) {
-    this.getById(id);
-    groupRepository.delete(id);
+  async delete(id) {
+    await this.getById(id);
+    await groupRepository.delete(id);
     return { message: 'Grup berhasil dihapus' };
   }
 }

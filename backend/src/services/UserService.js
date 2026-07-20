@@ -6,14 +6,14 @@ const SALT_ROUNDS = 10;
 const MIN_PASSWORD_LENGTH = 6;
 
 class UserService {
-  getAll() {
-    const users = userRepository.findAll();
+  async getAll() {
+    const users = await userRepository.findAll();
     // Hilangkan password dari response untuk keamanan
     return users.map(({ password, ...user }) => user);
   }
 
-  getById(id) {
-    const user = userRepository.findById(id);
+  async getById(id) {
+    const user = await userRepository.findById(id);
     if (!user) throw { status: 404, message: 'User tidak ditemukan' };
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
@@ -27,7 +27,7 @@ class UserService {
       throw { status: 400, message: `Password minimal ${MIN_PASSWORD_LENGTH} karakter` };
     }
 
-    const existingUser = userRepository.findByUsername(data.username);
+    const existingUser = await userRepository.findByUsername(data.username);
     if (existingUser) {
       throw { status: 400, message: 'Username sudah digunakan' };
     }
@@ -42,18 +42,18 @@ class UserService {
       role: data.role,
       teamId: data.teamId || null
     };
-    const created = userRepository.create(newUser);
+    const created = await userRepository.create(newUser);
     const { password: _, ...result } = created;
     return result;
   }
 
   async update(id, data) {
-    const existing = userRepository.findById(id);
+    const existing = await userRepository.findById(id);
     if (!existing) throw { status: 404, message: 'User tidak ditemukan' };
 
     // Cek duplikasi username jika username diganti
     if (data.username && data.username !== existing.username) {
-      const isDuplicate = userRepository.findByUsername(data.username);
+      const isDuplicate = await userRepository.findByUsername(data.username);
       if (isDuplicate) throw { status: 400, message: 'Username sudah digunakan' };
     }
 
@@ -76,7 +76,7 @@ class UserService {
       teamId: data.teamId !== undefined ? data.teamId : existing.teamId
     };
 
-    const result = userRepository.update(id, updated);
+    const result = await userRepository.update(id, updated);
     const { password: _, ...safeResult } = result;
     return safeResult;
   }
@@ -88,14 +88,14 @@ class UserService {
    * trail di skala production.
    */
   async resetPassword(id, newPassword, adminId) {
-    const existing = userRepository.findById(id);
+    const existing = await userRepository.findById(id);
     if (!existing) throw { status: 404, message: 'User tidak ditemukan' };
     if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
       throw { status: 400, message: `Password baru minimal ${MIN_PASSWORD_LENGTH} karakter` };
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-    const updated = userRepository.update(id, {
+    const updated = await userRepository.update(id, {
       password: hashedPassword,
       passwordResetAt: new Date().toISOString(),
       passwordResetBy: adminId
@@ -105,11 +105,11 @@ class UserService {
     return safeResult;
   }
 
-  delete(id) {
-    const existing = userRepository.findById(id);
+  async delete(id) {
+    const existing = await userRepository.findById(id);
     if (!existing) throw { status: 404, message: 'User tidak ditemukan' };
 
-    userRepository.delete(id);
+    await userRepository.delete(id);
     return { message: 'User berhasil dihapus' };
   }
 }

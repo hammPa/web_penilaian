@@ -3,15 +3,15 @@ const teamRepository = require('../repositories/TeamRepository');
 const groupRepository = require('../repositories/GroupRepository');
 
 class TeamService {
-  getAll() {
+  async getAll() {
     return teamRepository.findAll();
   }
-  getById(id) {
-    const team = teamRepository.findById(id);
+  async getById(id) {
+    const team = await teamRepository.findById(id);
     if (!team) throw { status: 404, message: 'Tim tidak ditemukan' };
     return team;
   }
-  create(data) {
+  async create(data) {
     if (!data.name) throw { status: 400, message: 'Nama tim wajib diisi' };
     const newTeam = {
       id: uuidv4(),
@@ -19,21 +19,23 @@ class TeamService {
     };
     return teamRepository.create(newTeam);
   }
-  update(id, data) {
-    const existing = this.getById(id);
+  async update(id, data) {
+    const existing = await this.getById(id);
     const updated = {
       name: data.name || existing.name
     };
     return teamRepository.update(id, updated);
   }
-  delete(id) {
-    this.getById(id);
+  async delete(id) {
+    await this.getById(id);
     // Cascade: lepaskan (unassign) semua grup yang masih terhubung ke tim ini,
     // bukan ikut terhapus -- grup tetap ada, cuma jadi tidak bertim.
-    const relatedGroups = groupRepository.findByTeamId(id);
-    relatedGroups.forEach(g => groupRepository.update(g.id, { teamId: null }));
+    const relatedGroups = await groupRepository.findByTeamId(id);
+    for (const g of relatedGroups) {
+      await groupRepository.update(g.id, { teamId: null });
+    }
 
-    teamRepository.delete(id);
+    await teamRepository.delete(id);
     return { message: 'Tim berhasil dihapus' };
   }
 }
