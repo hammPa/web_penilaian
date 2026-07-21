@@ -36,7 +36,6 @@ export default function PwaInstallPrompt() {
         setDeferredPrompt(null);
       }
     } else {
-      // Menggunakan SweetAlert agar estetik dan selaras dengan tema aplikasi
       Swal.fire({
         title: 'Cara Install Aplikasi',
         html: `
@@ -49,7 +48,7 @@ export default function PwaInstallPrompt() {
           </div>
         `,
         icon: 'info',
-        confirmButtonText: mengerti,
+        confirmButtonText: 'Mengerti', // <-- SUDAH DIPERBAIKI (pakai tanda kutip)
         confirmButtonColor: '#C8933E'
       });
     }
