@@ -8,7 +8,7 @@ import criteriaService from '../../services/criteriaService';
 import variableService from '../../services/variableService';
 import tableService from '../../services/tableService';
 import { useToast } from '../../hooks/useToast';
-import { Eye, Search, ArrowUpDown } from 'lucide-react';
+import { Eye, Search, ArrowUpDown, Trash2 } from 'lucide-react';
 
 import ScoreBadge from '../../components/ScoreBadge';
 import AssessmentDetail from './AssessmentDetail';
@@ -25,8 +25,12 @@ export default function AdminAssessments() {
 
   // State untuk kontrol Filter Pencarian & Pengurutan
   const [searchName, setSearchName] = useState('');
-  const [sortOrder, setSortOrder] = useState('newest'); 
-  const [searchField, setSearchField] = useState('all'); 
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [searchField, setSearchField] = useState('all');
+
+  // State untuk hapus penilaian
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -89,6 +93,21 @@ export default function AdminAssessments() {
 
     return result;
   }, [assessments, searchName, sortOrder, searchField]);
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await assessmentService.remove(toDelete.id);
+      setAssessments((prev) => prev.filter((a) => a.id !== toDelete.id));
+      showToast('Penilaian berhasil dihapus', 'success');
+      setToDelete(null);
+    } catch (err) {
+      showToast('Gagal menghapus penilaian', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) return <Loading />;
 
@@ -155,10 +174,10 @@ export default function AdminAssessments() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 w-full">
                       <p className="font-mono text-[11px] text-slate-400">{item.id.slice(0, 8)}</p>
-                      
+
                       <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                         <span className="text-sm font-medium text-slate-700 truncate">{item.name}</span>
-                        <button 
+                        <button
                           onClick={() => setVisibleUserId(isIdVisible ? null : item.id)}
                           className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors"
                         >
@@ -171,7 +190,7 @@ export default function AdminAssessments() {
                           UID: {item.userId}
                         </p>
                       )}
-                      
+
                       <p className="text-xs text-slate-400 mt-1">
                         {new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
@@ -188,12 +207,20 @@ export default function AdminAssessments() {
                         <ScoreBadge percentage={item.results.total} />
                       </p>
                     </div>
-                    <button
-                      onClick={() => setSelected(item)}
-                      className="inline-flex items-center gap-1.5 text-sm text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
-                    >
-                      <Eye size={16} /> Lihat
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setSelected(item)}
+                        className="inline-flex items-center gap-1.5 text-sm text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
+                      >
+                        <Eye size={16} /> Lihat
+                      </button>
+                      <button
+                        onClick={() => setToDelete(item)}
+                        className="inline-flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-medium transition-colors"
+                      >
+                        <Trash2 size={16} /> Hapus
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -203,18 +230,18 @@ export default function AdminAssessments() {
           {/* DESKTOP — tabel seperti semula */}
           <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <Table
-              headers={['ID', 'User', 'Sesi', 'Grup', 'Tim', 'Tanggal', 'Total', 'Detail']}
+              headers={['ID', 'User', 'Sesi', 'Grup', 'Tim', 'Tanggal', 'Total', 'Aksi']}
               data={processedAssessments}
               renderRow={(item) => {
                 const isIdVisible = visibleUserId === item.id;
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id.slice(0, 8)}</td>
-                    
+
                     <td className="px-6 py-4 text-slate-600">
                       <div className="relative flex items-center gap-2">
                         <span className="font-medium text-[#17203A]">{item.name}</span>
-                        
+
                         <button
                           onClick={() => setVisibleUserId(isIdVisible ? null : item.id)}
                           title="Tampilkan / Sembunyikan User ID"
@@ -230,7 +257,7 @@ export default function AdminAssessments() {
                         )}
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4 text-slate-600 text-sm">{item.sessionName || '-'}</td>
                     <td className="px-6 py-4 text-slate-600 text-sm">{item.groupName || '-'}</td>
                     <td className="px-6 py-4 text-slate-600 text-sm">{item.teamName || '-'}</td>
@@ -242,12 +269,20 @@ export default function AdminAssessments() {
                       <ScoreBadge percentage={item.results.total} />
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => setSelected(item)}
-                        className="inline-flex items-center gap-1.5 text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
-                      >
-                        <Eye size={16} /> Lihat
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setSelected(item)}
+                          className="inline-flex items-center gap-1.5 text-[#17203A] hover:text-[#C8933E] font-medium transition-colors"
+                        >
+                          <Eye size={16} /> Lihat
+                        </button>
+                        <button
+                          onClick={() => setToDelete(item)}
+                          className="inline-flex items-center gap-1.5 text-red-500 hover:text-red-700 font-medium transition-colors"
+                        >
+                          <Trash2 size={16} /> Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -264,6 +299,37 @@ export default function AdminAssessments() {
         size="lg"
       >
         <AssessmentDetail item={selected} tableMap={tableMap} criteriaMap={criteriaMap} variableMap={variableMap} />
+      </Modal>
+
+      <Modal
+        isOpen={!!toDelete}
+        onClose={() => !deleting && setToDelete(null)}
+        title="Hapus Penilaian?"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Anda akan menghapus penilaian dari <strong>{toDelete?.name}</strong> untuk grup{' '}
+            <strong>{toDelete?.groupName}</strong> pada sesi <strong>{toDelete?.sessionName}</strong>.
+            Tindakan ini <strong>tidak bisa dibatalkan</strong>.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setToDelete(null)}
+              disabled={deleting}
+              className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              {deleting ? 'Menghapus...' : 'Ya, Hapus'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

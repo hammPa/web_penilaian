@@ -20,4 +20,9 @@ const update = async (id, selections, photos, recommendation) => {
   return res.data.data;
 };
 
-export default { create, getAll, getById, update };
+const remove = async (id) => {
+  const res = await api.delete(`/assessments/${id}`);
+  return res.data.data;
+};
+
+export default { create, getAll, getById, update, remove };

@@ -47,6 +47,15 @@ class AssessmentController {
       next(err);
     }
   }
+
+  async delete(req, res, next) {
+    try {
+      const data = await assessmentService.delete(req.params.id, req.user.role);
+      success(res, data, 'Penilaian berhasil dihapus');
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new AssessmentController();

@@ -219,6 +219,19 @@ class AssessmentService {
     const withUser = { ...assessment, name: user ? user.name : 'User Tidak Dikenal' };
     return this._enrichWithNames(withUser);
   }
+
+  // hapus assessment — admin only
+  async delete(id, role) {
+    if (role !== 'admin') {
+      throw { status: 403, message: 'Hanya admin yang bisa menghapus penilaian' };
+    }
+
+    const assessment = await assessmentRepository.findById(id);
+    if (!assessment) throw { status: 404, message: 'Penilaian tidak ditemukan' };
+
+    await assessmentRepository.delete(id);
+    return { id };
+  }
 }
 
 module.exports = new AssessmentService();
