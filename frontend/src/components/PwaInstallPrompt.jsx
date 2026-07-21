@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export default function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // 1. Cek apakah aplikasi sudah di-install (berjalan dalam mode standalone)
     const checkStandalone = () => {
       const isRunningStandalone = 
         window.matchMedia('(display-mode: standalone)').matches || 
@@ -16,7 +16,6 @@ export default function PwaInstallPrompt() {
 
     checkStandalone();
 
-    // 2. Tangkap event prompt dari browser jika tersedia
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -30,7 +29,6 @@ export default function PwaInstallPrompt() {
   }, []);
 
   const handleInstallClick = async () => {
-    // Jika event browser tersedia, gunakan method prompt() bawaan
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
@@ -38,16 +36,25 @@ export default function PwaInstallPrompt() {
         setDeferredPrompt(null);
       }
     } else {
-      // Fallback jika event belum/tidak menembak (memberikan instruksi manual ke pengguna)
-      alert(
-        "Untuk menginstall aplikasi ini:\n\n" +
-        "1. Ketuk menu titik tiga (⋮) di pojok kanan atas browser Anda.\n" +
-        "2. Pilih 'Install aplikasi' atau 'Tambahkan ke Layar Utama'."
-      );
+      // Menggunakan SweetAlert agar estetik dan selaras dengan tema aplikasi
+      Swal.fire({
+        title: 'Cara Install Aplikasi',
+        html: `
+          <div style="text-align: left; font-size: 14px; color: #475569; line-height: 1.6;">
+            <p style="margin-bottom: 8px;">Agar aplikasi lebih mudah diakses seperti aplikasi native:</p>
+            <ol style="padding-left: 20px; margin: 0;">
+              <li>Ketuk menu <b>titik tiga (⋮)</b> di pojok kanan atas browser Anda.</li>
+              <li>Pilih opsi <b>'Install aplikasi'</b> atau <b>'Tambahkan ke Layar Utama'</b>.</li>
+            </ol>
+          </div>
+        `,
+        icon: 'info',
+        confirmButtonText: mengerti,
+        confirmButtonColor: '#C8933E'
+      });
     }
   };
 
-  // Jika aplikasi sudah dibuka sebagai PWA yang ter-install, sembunyikan tombol
   if (isStandalone) return null;
 
   return (
