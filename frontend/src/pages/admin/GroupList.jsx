@@ -146,7 +146,7 @@ export default function GroupList() {
                 <tr>
                   <th className="px-6 py-4">Nama Grup</th>
                   <th className="px-6 py-4">Gugus</th>
-                  <th className="px-6 py-4">Tim</th>
+                  <th className="px-6 py-4">Tim Penilai</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
               </thead>

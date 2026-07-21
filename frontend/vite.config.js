@@ -9,22 +9,33 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      // includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
-      includeAssets: ['logo.svg'],
+      injectRegister: 'auto', // Memastikan script SW disuntikkan ke index.html
+      includeAssets: ['logo.svg', 'pwa-192x192.png', 'pwa-512x512.png'], // Masukkan file PNG ke cache
       manifest: {
-        name: 'Aplikasi Penilaian', // Sesuaikan dengan nama web kamu
+        name: 'Aplikasi Penilaian', 
         short_name: 'PenilaianApp',
         description: 'Aplikasi penilaian',
         theme_color: '#17203A',
         background_color: '#F3F4F7',
         display: 'standalone',
+        start_url: '/', // PENTING: Syarat wajib agar tombol install muncul
         icons: [
           {
-            src: 'logo.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
           },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable' // Agar icon bisa menyesuaikan bentuk (bulat/kotak) di Android
+          }
         ]
       }
     })

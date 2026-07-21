@@ -22,6 +22,7 @@ import AssessmentResult from '../pages/user/AssessmentResult';
 import AssessmentHistory from '../pages/user/AssessmentHistory';
 import AssessmentRecap from '../pages/admin/AsssessmentRecap';
 import AssessmentEdit from '../pages/user/AssessmentEdit';
+import Settings from '../pages/admin/Settings';
 
 export default function AppRoutes() {
   return (
@@ -47,6 +48,7 @@ export default function AppRoutes() {
         <Route path="teams" element={<TeamList />} />
         <Route path="groups" element={<GroupList />} />
         <Route path="recap" element={<AssessmentRecap />} />
+        <Route path='settings' element={<Settings />} />
       </Route>
 
       {/* User routes */}

@@ -24,20 +24,20 @@ async function renderAssessmentPdf({
   const margin = 15;
   let y = margin;
 
+  // Set default text color ke hitam pekat
+  doc.setTextColor(0, 0, 0);
+
   // 1. MENGURUTKAN DATA (Sorting Numerik/Alfabet)
-  // Agar urut dari Tabel 1, Tabel 2, dst. Kriteria 1, Kriteria 2, dst.
   sections.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
   sections.forEach(sec => {
     sec.criteria.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
-    // sec.criteria.forEach(crit => {
-    //   crit.items.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
-    // });
   });
 
   const checkPageBreak = (needed) => {
     if (y + needed > pageHeight - margin) {
       doc.addPage();
       y = margin;
+      doc.setTextColor(0, 0, 0); // Reset color after page break
     }
   };
 
@@ -49,13 +49,14 @@ async function renderAssessmentPdf({
   doc.text('LAPORAN HASIL PENILAIAN', margin, y);
   
   // Garis Bawah Header
-  doc.setLineWidth(0.5);
+  doc.setLineWidth(0.6);
   doc.setDrawColor(23, 32, 58);
   doc.line(margin, y + 2, pageWidth - margin, y + 2);
   y += 10;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
   
   // Informasi Meta dalam bentuk grid teks 2 Kolom
   const leftColX = margin;
@@ -82,6 +83,7 @@ async function renderAssessmentPdf({
     checkPageBreak(25);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
     doc.text('Foto Dokumentasi', margin, y);
     y += 6;
 
@@ -105,16 +107,17 @@ async function renderAssessmentPdf({
   }
 
   // =====================================================================
-  // REKOMENDASI (Menggunakan Kotak autoTable agar Rapi)
+  // REKOMENDASI
   // =====================================================================
   if (recommendation && recommendation.trim() !== '') {
+    checkPageBreak(20);
     autoTable(doc, {
       head: [['Rekomendasi / Catatan']],
       body: [[recommendation]],
       startY: y,
       theme: 'grid',
-      headStyles: { fillColor: [23, 32, 58], textColor: 255, fontSize: 10 },
-      bodyStyles: { fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [23, 32, 58], textColor: 255, fontSize: 10, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 9, cellPadding: 4, textColor: [0, 0, 0] },
       margin: { left: margin, right: margin }
     });
     y = doc.lastAutoTable.finalY + 12;
@@ -125,41 +128,50 @@ async function renderAssessmentPdf({
   // =====================================================================
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
   doc.text('Detail Penilaian', margin, y);
   y += 6;
 
-  sections.forEach((section) => {
-    // Header section
-    doc.setFontSize(11);
-    doc.setTextColor(23, 32, 58);
+  sections.forEach((section, index) => {
+    // Memaksa section ke-2 dan seterusnya untuk mulai di halaman baru
+    if (index > 0) {
+      doc.addPage();
+      y = margin;
+    } else {
+      checkPageBreak(30); // Cek ketersediaan ruang untuk section pertama
+    }
+
+    // Judul Section/Tabel
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
     doc.text(`Tabel: ${section.name}`, margin, y + 2);
     
     const head = [['Kriteria', 'Variabel Penilaian', 'Pilihan Level', 'Skor']];
     const body = [];
 
     section.criteria.forEach((crit) => {
-      crit.items.forEach((item, index) => {
+      crit.items.forEach((item, itemIndex) => {
         const itemScoreStr = Number(item.score).toFixed(2);
-        if (index === 0) {
-          // Rowspan untuk Kriteria
+        if (itemIndex === 0) {
           body.push([
-            { content: crit.name, rowSpan: crit.items.length, styles: { valign: 'middle', fontStyle: 'bold' } },
+            { content: crit.name, rowSpan: crit.items.length, styles: { valign: 'middle', fontStyle: 'bold', textColor: [0, 0, 0] } },
             item.name,
             item.levelText,
-            { content: itemScoreStr, styles: { halign: 'center' } }
+            { content: itemScoreStr, styles: { halign: 'center', fontStyle: 'bold' } }
           ]);
         } else {
           body.push([
             item.name,
             item.levelText,
-            { content: itemScoreStr, styles: { halign: 'center' } }
+            { content: itemScoreStr, styles: { halign: 'center', fontStyle: 'bold' } }
           ]);
         }
       });
       // Baris Tambahan untuk Subtotal Kriteria
       body.push([
-        { content: `Subtotal ${crit.name}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [245, 246, 248] } },
-        { content: Number(crit.subtotal).toFixed(2), styles: { halign: 'center', fontStyle: 'bold', fillColor: [245, 246, 248] } }
+        { content: `Subtotal ${crit.name}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [230, 235, 245], textColor: [0, 0, 0] } },
+        { content: Number(crit.subtotal).toFixed(2), styles: { halign: 'center', fontStyle: 'bold', fillColor: [230, 235, 245], textColor: [0, 0, 0] } }
       ]);
     });
 
@@ -168,13 +180,13 @@ async function renderAssessmentPdf({
       body,
       startY: y + 5,
       theme: 'grid',
-      headStyles: { fillColor: [70, 80, 100], textColor: 255, halign: 'center' },
-      bodyStyles: { fontSize: 9, valign: 'middle' },
+      headStyles: { fillColor: [23, 32, 58], textColor: 255, halign: 'center', fontStyle: 'bold', fontSize: 10 },
+      bodyStyles: { fontSize: 9, valign: 'middle', textColor: [0, 0, 0] },
       columnStyles: {
-        0: { cellWidth: 40 }, // Kriteria
-        1: { cellWidth: 'auto' }, // Variabel
-        2: { cellWidth: 50 }, // Pilihan Level
-        3: { cellWidth: 20 }  // Skor
+        0: { cellWidth: 40 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 50 },
+        3: { cellWidth: 20 }
       },
       margin: { left: margin, right: margin }
     });
@@ -183,13 +195,14 @@ async function renderAssessmentPdf({
   });
 
   // =====================================================================
-  // REKAP NILAI (Dengan Rowspan per Tabel & Total Tabel)
+  // REKAP NILAI (Dipaksa masuk ke Halaman Baru agar rapi)
   // =====================================================================
-  checkPageBreak(30); // Memastikan ada cukup ruang untuk Rekap
+  doc.addPage();
+  y = margin;
   
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.setTextColor(0);
+  doc.setTextColor(0, 0, 0);
   doc.text('Rekapitulasi Nilai Akhir', margin, y);
   y += 5;
 
@@ -199,22 +212,18 @@ async function renderAssessmentPdf({
 
   sections.forEach((sec) => {
     const rowCount = sec.criteria.length;
-    // Hitung total dari subtotal pada satu tabel
     const totalTable = sec.criteria.reduce((sum, crit) => sum + Number(crit.subtotal), 0);
 
     sec.criteria.forEach((crit, idx) => {
       let row = [];
-      
-      // Baris pertama sebuah tabel diberi efek rowspan
       if (idx === 0) {
-        row.push({ content: String(tableNo), rowSpan: rowCount, styles: { halign: 'center', valign: 'middle' } });
-        row.push({ content: sec.name, rowSpan: rowCount, styles: { valign: 'middle', fontStyle: 'bold' } });
+        row.push({ content: String(tableNo), rowSpan: rowCount, styles: { halign: 'center', valign: 'middle', textColor: [0, 0, 0] } });
+        row.push({ content: sec.name, rowSpan: rowCount, styles: { valign: 'middle', fontStyle: 'bold', textColor: [0, 0, 0] } });
         row.push(crit.name);
         row.push({ content: Number(crit.subtotal).toFixed(2), styles: { halign: 'center' } });
-        row.push({ content: totalTable.toFixed(2), rowSpan: rowCount, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } });
+        row.push({ content: totalTable.toFixed(2), rowSpan: rowCount, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', textColor: [0, 0, 0] } });
         tableNo++;
       } else {
-        // Baris berikutnya, lewati sel yang di-rowspan
         row.push(crit.name);
         row.push({ content: Number(crit.subtotal).toFixed(2), styles: { halign: 'center' } });
       }
@@ -233,34 +242,23 @@ async function renderAssessmentPdf({
     body: rekapBody,
     startY: y,
     theme: 'grid',
-    headStyles: { fillColor: [23, 32, 58], textColor: 255, halign: 'center' },
-    bodyStyles: { fontSize: 9 },
+    headStyles: { fillColor: [23, 32, 58], textColor: 255, halign: 'center', fontStyle: 'bold', fontSize: 10 },
+    bodyStyles: { fontSize: 9, textColor: [0, 0, 0] }, 
     columnStyles: {
-      0: { cellWidth: 12 }, // No
-      1: { cellWidth: 45 }, // Tabel
-      2: { cellWidth: 65 }, // Kriteria
-      3: { cellWidth: 25 }, // Subtotal
-      4: { cellWidth: 33 }  // Total Tabel
+      0: { cellWidth: 12 },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 65 },
+      3: { cellWidth: 25 },
+      4: { cellWidth: 33 }
     },
-    // Menambahkan efek garis tegas batas antar tabel (opsional, seperti sebelumnya)
-    didDrawCell: (data) => {
-      if (data.section === 'body' && data.row.index > 0 && data.column.index === 0) {
-        const rawContent = data.cell.raw.content;
-        if (rawContent && !isNaN(rawContent)) { // Jika ini awal baris rowspan yang ada Nomor-nya
-          doc.setDrawColor(100, 100, 100);
-          doc.setLineWidth(0.4);
-          doc.line(data.cell.x, data.cell.y, pageWidth - margin, data.cell.y);
-        }
-      }
-    },
+    // Blok didDrawCell telah dihapus di sini agar autoTable mengurus garis murni secara otomatis
     margin: { left: margin, right: margin }
   });
 
-  // Simpan Dokumen
   doc.save(fileName);
 }
 
-// ---------- HALAMAN USER & MODAL ADMIN (Tetap Sama, Tidak Perlu Diubah) ----------
+// ---------- HALAMAN USER & MODAL ADMIN (Tetap Sama) ----------
 export async function userHistoryPdfExport({ assessment, variables, criteria, tables, baseUrl }) {
   const variableMap = {};
   variables.forEach(v => { variableMap[v.id] = v; });

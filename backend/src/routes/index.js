@@ -9,6 +9,7 @@ const teamRoutes = require('./teamRoutes');
 const groupRoutes = require('./groupRoutes');
 const userRoutes = require('./userRoutes');
 const uploadRoutes = require('./uploadRoutes');
+const settingRoutes = require('./settingRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/sessions', sessionRoutes);
@@ -20,5 +21,6 @@ router.use('/teams', teamRoutes);
 router.use('/groups', groupRoutes);
 router.use('/users', userRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/settings', settingRoutes);
 
 module.exports = router;

@@ -3,7 +3,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, LayoutGrid, FileCheck2, LogOut, Users,
-  UsersRound, Layers, Calculator, MoreHorizontal, X,
+  UsersRound, Layers, Calculator, MoreHorizontal, X, Settings
 } from 'lucide-react';
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { path: '/admin/users', label: 'Juri', icon: Users },
   { path: '/admin/assessments', label: 'Penilaian', icon: FileCheck2 },
   { path: '/admin/recap', label: 'Rekapitulasi', icon: Calculator },
+  { path: '/admin/settings', label: 'Pengaturan', icon: Settings },
 ];
 
 // 4 menu yang tampil langsung di tab bar mobile.

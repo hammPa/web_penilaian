@@ -63,24 +63,46 @@ export default function AssessmentResult() {
   });
 
   const { total, percentage } = assessment.results;
-  const maxTotal = percentage > 0 ? Math.round(total / (percentage / 100)) : 0;
+
+  // 1. Urutkan Tables secara alfanumerik (P1, P2, P3...)
+  const sortedTables = [...tables].sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+  );
+
+  // 2. Urutkan Kriteria secara alfanumerik
+  const sortedCriteria = [...criteria].sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+  );
+  
+  // 3. Urutkan Variabel secara alfanumerik
+  const sortedVariables = [...variables].sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+  );
 
   const subtotalCriteriaIds = Object.keys(assessment.results.subtotals);
-  const groupedTables = tables
+  
+  // Gunakan sortedTables dan sortedCriteria agar urutannya rapi sesuai abjad/angka
+  const groupedTables = sortedTables
     .map(t => ({
       table: t,
-      criteriaIds: subtotalCriteriaIds.filter(cid => criteriaMap[cid]?.tableId === t.id)
+      criteriaIds: sortedCriteria
+        .filter(c => c.tableId === t.id && assessment.results.subtotals[c.id] !== undefined)
+        .map(c => c.id)
     }))
     .filter(g => g.criteriaIds.length > 0);
 
   const orphanCriteriaIds = subtotalCriteriaIds.filter(
-    cid => !criteriaMap[cid] || !tables.some(t => t.id === criteriaMap[cid].tableId)
+    cid => !criteriaMap[cid] || !sortedTables.some(t => t.id === criteriaMap[cid].tableId)
   );
   
   const renderCriteriaCard = (criteriaId) => {
     const subtotal = assessment.results.subtotals[criteriaId];
     const crit = criteriaMap[criteriaId] || { name: criteriaId };
-    const varIds = variables.filter(v => v.criteriaId === criteriaId).map(v => v.id);
+    
+    // Gunakan sortedVariables agar urutan Variabel di dalam kriteria juga urut
+    const varIds = sortedVariables
+      .filter(v => v.criteriaId === criteriaId)
+      .map(v => v.id);
 
     return (
       <Card key={criteriaId}>
@@ -149,7 +171,6 @@ export default function AssessmentResult() {
 
   const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
 
-
   const handleDownloadPdf = async () => {
     setDownloading(true);
     try {
@@ -203,7 +224,6 @@ export default function AssessmentResult() {
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-slate-400">Total Nilai</p>
             <p className="mt-0.5 font-serif text-xl sm:text-2xl font-semibold text-[#C8933E]">
               {Number(total).toFixed(2)}
-              {/* {maxTotal > 0 && <span className="text-xs sm:text-base font-normal text-slate-400"> / {maxTotal}</span>} */}
             </p>
           </div>
         </div>
@@ -258,12 +278,13 @@ export default function AssessmentResult() {
         </div>
       )}
 
-      {/* {assessment.recommendation && assessment.recommendation.trim() !== '' && ( */}
+      {/* Rekomendasi */}
+      {assessment.recommendation && assessment.recommendation.trim() !== '' && (
         <div className="mb-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
           <h3 className="font-serif text-base sm:text-lg font-semibold text-[#17203A] mb-2">Rekomendasi</h3>
           <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{assessment.recommendation}</p>
         </div>
-      {/* )} */}
+      )}
 
       {/* Sticky Bottom / Floating Toggle Detail Container */}
       <div className="mb-6 flex justify-center sticky top-4 z-10 sm:relative sm:top-0">

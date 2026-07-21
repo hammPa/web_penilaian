@@ -1,16 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { Gauge, Loader2, User, Lock } from 'lucide-react';
+import settingService from '../services/settingService';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waNumber, setWaNumber] = useState('6281234567890');
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    const fetchWa = async () => {
+      try {
+        const data = await settingService.get('whatsapp_admin');
+        if (data.value) setWaNumber(data.value);
+      } catch (err) {
+        // Abaikan error jika gagal terhubung di halaman login
+      }
+    };
+    fetchWa();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -115,7 +130,7 @@ export default function Login() {
           <p className="text-[13px] text-slate-500">
             Lupa password atau tidak bisa login?{' '}
             <a 
-              href={`https://wa.me/${import.meta.env.VITE_ADMIN_WHATSAPP}?text=Halo%20Admin,%20saya%20butuh%20bantuan%20terkait%20login%20Aplikasi%20Penilaian.`} 
+              href={`https://wa.me/${waNumber}?text=Halo%20Admin,%20saya%20butuh%20bantuan%20terkait%20login%20Aplikasi%20Penilaian.`} 
               target="_blank" 
               rel="noreferrer"
               className="text-[#C8933E] font-semibold hover:underline transition-all"

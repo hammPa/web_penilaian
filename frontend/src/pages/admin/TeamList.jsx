@@ -7,6 +7,17 @@ import teamService from '../../services/teamService';
 import groupService from '../../services/groupService';
 import { Users, Edit2, Trash2 } from 'lucide-react';
 
+// Palet warna untuk chip grup (Soft Pastel + Border)
+const CHIP_COLORS = [
+  'bg-blue-50 text-blue-700 border-blue-200',
+  'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'bg-purple-50 text-purple-700 border-purple-200',
+  'bg-amber-50 text-amber-700 border-amber-200',
+  'bg-rose-50 text-rose-700 border-rose-200',
+  'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'bg-indigo-50 text-indigo-700 border-indigo-200',
+];
+
 export default function TeamList() {
   const [teams, setTeams] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -122,7 +133,13 @@ export default function TeamList() {
               return (
                 <div key={team.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-medium text-slate-800 text-sm truncate">{team.name}</h3>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="font-medium text-slate-800 text-sm truncate">{team.name}</h3>
+                      {/* UPDATE: Badge Total Dinilai (Mobile) */}
+                      <span className="inline-flex w-fit items-center justify-center bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-semibold">
+                        {teamGroups.length} Grup Dinilai
+                      </span>
+                    </div>
                     <div className="flex gap-1 shrink-0">
                       <button onClick={() => openEdit(team)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg">
                         <Edit2 size={16} />
@@ -132,28 +149,41 @@ export default function TeamList() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  
+                  {/* Tampilan Grup ala Chip Berwarna (Mobile) */}
+                  <div className="mt-3">
                     {teamGroups.length > 0 ? (
-                      <>
-                        <span className="font-medium text-slate-600">{teamGroups.length} grup: </span>
-                        {teamGroups.map(g => g.name).join(', ')}
-                      </>
+                      <div className="flex flex-wrap gap-1.5">
+                        {teamGroups.map((g, index) => {
+                          const colorClass = CHIP_COLORS[index % CHIP_COLORS.length];
+                          return (
+                            <span 
+                              key={g.id} 
+                              className={`text-xs font-medium border px-2.5 py-1 rounded-md shadow-sm ${colorClass}`}
+                            >
+                              {g.name} <span className="opacity-75 font-normal">({g.gugus})</span>
+                            </span>
+                          );
+                        })}
+                      </div>
                     ) : (
-                      <span className="italic text-slate-400">Belum ada grup</span>
+                      <span className="text-xs italic text-slate-400">Belum ada grup</span>
                     )}
-                  </p>
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* DESKTOP — tabel seperti semula */}
+          {/* DESKTOP — tabel */}
           <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                 <tr>
                   <th className="px-6 py-4">Nama Tim</th>
-                  <th className="px-6 py-4">Grup Terdaftar</th>
+                  {/* UPDATE: Kolom Baru Total Dinilai */}
+                  <th className="px-6 py-4 whitespace-nowrap">Total Dinilai</th>
+                  <th className="px-6 py-4 w-1/2">Grup yang akan dinilai</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
@@ -162,17 +192,41 @@ export default function TeamList() {
                   const teamGroups = getGroupsForTeam(team.id);
                   return (
                     <tr key={team.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-medium text-slate-800">{team.name}</td>
-                      <td className="px-6 py-4 text-slate-600 leading-relaxed">
+                      <td className="px-6 py-4 font-medium text-slate-800 align-top">{team.name}</td>
+                      
+                      {/* UPDATE: Isi Kolom Total Dinilai (Desktop) */}
+                      <td className="px-6 py-4 align-top">
+                        <div className="inline-flex items-center justify-center bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-semibold shadow-sm border border-slate-200">
+                          {teamGroups.length} Grup
+                        </div>
+                      </td>
+
+                      {/* Tampilan Grup ala Chip Berwarna (Desktop) */}
+                      <td className="px-6 py-4">
                         {teamGroups.length > 0 ? (
-                          teamGroups.map(g => `${g.name} (${g.gugus})`).join(', ')
+                          <div className="flex flex-wrap gap-1.5">
+                            {teamGroups.map((g, index) => {
+                              const colorClass = CHIP_COLORS[index % CHIP_COLORS.length];
+                              return (
+                                <span 
+                                  key={g.id} 
+                                  className={`text-xs font-medium border px-2.5 py-1 rounded-md shadow-sm ${colorClass}`}
+                                >
+                                  {g.name} <span className="opacity-75 font-normal">({g.gugus})</span>
+                                </span>
+                              );
+                            })}
+                          </div>
                         ) : (
-                          <span className="text-slate-400 italic">Belum ada grup</span>
+                          <span className="text-xs text-slate-400 italic">Belum ada grup</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-2">
-                        <button onClick={() => openEdit(team)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg"><Edit2 size={16} /></button>
-                        <button onClick={() => handleDelete(team.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                      
+                      <td className="px-6 py-4 text-right align-top">
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => openEdit(team)} className="p-2 text-slate-400 hover:text-[#C8933E] hover:bg-[#C8933E]/10 rounded-lg"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDelete(team.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                        </div>
                       </td>
                     </tr>
                   );
