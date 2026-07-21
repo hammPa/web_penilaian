@@ -7,6 +7,7 @@ export default function PwaInstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    // Cek apakah aplikasi sudah terinstal (mode standalone)
     const checkStandalone = () => {
       const isRunningStandalone =
         window.matchMedia('(display-mode: standalone)').matches ||
@@ -15,9 +16,10 @@ export default function PwaInstallPrompt() {
     };
     checkStandalone();
 
+    // Tangkap event beforeinstallprompt
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e); // simpan event untuk dipakai nanti
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -27,39 +29,53 @@ export default function PwaInstallPrompt() {
     };
   }, []);
 
-  const handleInstallClick = async () => {
+  const handleInstallClick = () => {
     if (deferredPrompt) {
       // Tampilkan SweetAlert dengan tombol install
       Swal.fire({
         title: 'Instal Aplikasi',
-        text: 'Pasang aplikasi ini di perangkat Anda?',
+        text: 'Pasang aplikasi ini di perangkat Anda agar lebih mudah diakses.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Install',
-        cancelButtonText: 'Nanti',
+        confirmButtonText: 'Install Sekarang',
+        cancelButtonText: 'Nanti Saja',
         confirmButtonColor: '#C8933E',
+        cancelButtonColor: '#64748b',
         reverseButtons: true,
       }).then(async (result) => {
         if (result.isConfirmed) {
+          // User klik Install → langsung muncul prompt bawaan browser
           deferredPrompt.prompt();
           const { outcome } = await deferredPrompt.userChoice;
           if (outcome === 'accepted') {
             setDeferredPrompt(null);
-            Swal.fire('Berhasil!', 'Aplikasi terinstal.', 'success');
+            Swal.fire('Berhasil!', 'Aplikasi sedang diinstal.', 'success');
+          } else {
+            Swal.fire('Dibatalkan', 'Anda bisa instal nanti.', 'info');
           }
         }
       });
     } else {
-      // Fallback manual
+      // Fallback jika browser tidak mendukung (misal Safari atau sudah ditolak)
       Swal.fire({
-        title: 'Cara Install',
-        html: `<p>Buka menu browser (⋮) → Install Aplikasi</p>`,
+        title: 'Cara Install Manual',
+        html: `
+          <div style="text-align:left; font-size:14px;">
+            <p>Browser Anda tidak mendukung instalasi otomatis. Silakan instal manual:</p>
+            <ol style="padding-left:20px;">
+              <li>Klik menu <b>⋮</b> (titik tiga) di pojok kanan atas.</li>
+              <li>Pilih <b>'Install aplikasi'</b> atau <b>'Tambahkan ke Layar Utama'</b>.</li>
+            </ol>
+          </div>
+        `,
         icon: 'info',
-        confirmButtonText: 'OK',
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: '#C8933E',
       });
     }
   };
 
+  // Jika sudah terinstal, sembunyikan tombol
   if (isStandalone) return null;
 
   return (
