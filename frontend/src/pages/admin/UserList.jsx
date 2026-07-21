@@ -38,6 +38,20 @@ export default function UserList() {
         userService.getAll(),
         teamService.getAll()
       ]);
+
+      // Mengurutkan user berdasarkan Nama Tim mereka secara numerik
+      usersData.sort((a, b) => {
+        const teamA = teamsData.find(t => t.id === a.teamId)?.name || '';
+        const teamB = teamsData.find(t => t.id === b.teamId)?.name || '';
+        
+        // Jika nama tim sama, urutkan berdasarkan nama user
+        if (teamA === teamB) {
+           return (a.name || '').localeCompare(b.name || '');
+        }
+
+        return teamA.localeCompare(teamB, undefined, { numeric: true });
+      });
+
       setUsers(usersData);
       setTeams(teamsData);
     } catch (err) {
@@ -156,19 +170,19 @@ export default function UserList() {
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#C8933E]">Manajemen Akun</p>
           <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#17203A]">
-            Daftar Pengguna
+            Daftar Juri
           </h1>
         </div>
         <button
           onClick={openCreate}
           className="w-full sm:w-auto bg-[#17203A] cursor-pointer hover:bg-[#232f52] text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
         >
-          + Tambah Pengguna
+          + Tambah Juri
         </button>
       </div>
 
       {users.length === 0 ? (
-        <EmptyState message="Belum ada data pengguna" icon={<Users />} />
+        <EmptyState message="Belum ada data juri" icon={<Users />} />
       ) : (
         <>
           {/* MOBILE — daftar card, satu kolom */}
@@ -253,7 +267,7 @@ export default function UserList() {
       )}
 
       {/* Modal Tambah/Edit Pengguna (TANPA password lagi) */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Pengguna' : 'Tambah Pengguna'}>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? 'Edit Juri' : 'Tambah Juri'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className={labelClass}>Nama Lengkap</label>
@@ -316,7 +330,7 @@ export default function UserList() {
           </div>
           {editItem && (
             <p className="text-xs text-slate-500">
-              Untuk mengganti password, gunakan tombol <KeyRound size={12} className="inline align-text-bottom" /> Reset Password di daftar pengguna.
+              Untuk mengganti password, gunakan tombol <KeyRound size={12} className="inline align-text-bottom" /> Reset Password di daftar juri.
             </p>
           )}
           <div className="flex justify-end gap-2 pt-2">

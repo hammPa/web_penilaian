@@ -23,6 +23,12 @@ export default function TeamList() {
         teamService.getAll(),
         groupService.getAll()
       ]);
+      
+      // Mengurutkan tim berdasarkan nama (Tim 1, Tim 2, Tim 10)
+      teamsData.sort((a, b) => 
+        (a.name || '').localeCompare(b.name || '', undefined, { numeric: true })
+      );
+
       setTeams(teamsData);
       setGroups(groupsData);
     } catch (err) {

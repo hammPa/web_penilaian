@@ -16,7 +16,7 @@ export default function StatusPengisianChart({
   return (
     <Card className="p-4 md:p-6 flex flex-col justify-start">
       <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400 mb-4">
-        Status Pengisian Peserta
+        Status Pengisian Juri
       </p>
 
       <div className="h-64 w-full flex items-center justify-center relative">

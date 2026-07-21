@@ -121,9 +121,17 @@ export const rekapNilai = ({
   });
   const totalCriteria = criteriaColumns.length;
 
-  const teamIdsInReport = [];
+  let teamIdsInReport = [];
   reportData.forEach(g => {
     if (g.teamId && !teamIdsInReport.includes(g.teamId)) teamIdsInReport.push(g.teamId);
+  });
+
+  // Tambahkan baris ini untuk MENGURUTKAN tim berdasarkan nama (Tim 1, Tim 2, dst)
+  teamIdsInReport.sort((idA, idB) => {
+    const teamA = teams.find(t => t.id === idA)?.name || '';
+    const teamB = teams.find(t => t.id === idB)?.name || '';
+    // numeric: true memastikan "Tim 10" berada setelah "Tim 9", bukan setelah "Tim 1"
+    return teamA.localeCompare(teamB, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   const groupAssessorLocation = {};

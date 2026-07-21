@@ -6,7 +6,9 @@ class AssessmentController {
     try {
       const { groupId, sessionId, selections, photos, recommendation } = req.body;
       // selections: [{ variableId, selectedLevel }]
-      const assessment = await assessmentService.create(req.user.id, groupId, sessionId, selections, photos, recommendation);
+      const assessment = await assessmentService.create(
+        req.user.id, groupId, sessionId, selections, photos, recommendation, req.user.role
+      );
       success(res, assessment, 'Penilaian berhasil disimpan', 201);
     } catch (err) {
       next(err);

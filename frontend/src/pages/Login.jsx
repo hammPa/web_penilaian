@@ -109,6 +109,22 @@ export default function Login() {
             ) : 'Masuk'}
           </button>
         </form>
+
+        {/* Teks Bantuan Hubungi Admin */}
+        <div className="mt-6 text-center border-t border-slate-100 pt-5">
+          <p className="text-[13px] text-slate-500">
+            Lupa password atau tidak bisa login?{' '}
+            <a 
+              href={`https://wa.me/${import.meta.env.VITE_ADMIN_WHATSAPP}?text=Halo%20Admin,%20saya%20butuh%20bantuan%20terkait%20login%20Aplikasi%20Penilaian.`} 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-[#C8933E] font-semibold hover:underline transition-all"
+            >
+              Hubungi Admin
+            </a>
+          </p>
+        </div>
+
       </div>
     </div>
   );

@@ -88,7 +88,28 @@ class AssessmentService {
     };
   }
 
-  async create(userId, groupId, sessionId, selections, photos = [], recommendation = '') {
+  /**
+   * Validasi: user non-admin cuma boleh menilai grup yang setim dengan dia.
+   * Sebelumnya ini TIDAK divalidasi di layer service -- kalau memang cuma
+   * diandalkan dari dropdown frontend, orang bisa bypass dengan POST
+   * langsung ke API pakai groupId dari tim lain. Admin di-bypass karena
+   * wajar admin perlu bisa menilai/mengisi lintas tim.
+   */
+  async _assertUserCanAssessGroup(userId, groupId, role) {
+    if (role === 'admin') return;
+
+    const user = await userRepository.findById(userId);
+    if (!user) throw { status: 404, message: 'User tidak ditemukan' };
+
+    const group = await groupRepository.findById(groupId);
+    if (!group) throw { status: 404, message: 'Grup tidak ditemukan' };
+
+    if (!user.teamId || !group.teamId || user.teamId !== group.teamId) {
+      throw { status: 403, message: 'Anda hanya bisa menilai grup yang setim dengan Anda' };
+    }
+  }
+
+  async create(userId, groupId, sessionId, selections, photos = [], recommendation = '', role = 'user') {
     if (!groupId || !sessionId) {
       throw { status: 400, message: 'Grup dan Sesi wajib disertakan' };
     }
@@ -96,6 +117,8 @@ class AssessmentService {
     if (!Array.isArray(selections) || selections.length === 0) {
       throw { status: 400, message: 'Pilihan tidak boleh kosong' };
     }
+
+    await this._assertUserCanAssessGroup(userId, groupId, role);
 
     const allAssessments = await assessmentRepository.findAll();
     const existing = allAssessments.find(

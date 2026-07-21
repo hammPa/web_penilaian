@@ -199,11 +199,11 @@ export default function AdminDashboard() {
     // lebih dari 1, dijumlah lalu dibagi jumlah penilai). Grup yang belum
     // ada satupun assessment masuk -> dihitung skor 0 (masuk kriteria 0 - 20).
     const scoreBuckets = {
-      '80 - 100': 0,
-      '60 - 80': 0,
-      '40 - 60': 0,
-      '20 - 40': 0,
-      '0 - 20': 0,
+      '80 - 100': { value: 0, groups: [] },
+      '60 - 80': { value: 0, groups: [] },
+      '40 - 60': { value: 0, groups: [] },
+      '20 - 40': { value: 0, groups: [] },
+      '0 - 20': { value: 0, groups: [] },
     };
 
     teams.forEach(team => {
@@ -220,16 +220,34 @@ export default function AdminDashboard() {
           ? groupScores.reduce((sum, s) => sum + s, 0) / groupScores.length
           : 0;
 
-        if (groupScore >= 80) scoreBuckets['80 - 100']++;
-        else if (groupScore >= 60) scoreBuckets['60 - 80']++;
-        else if (groupScore >= 40) scoreBuckets['40 - 60']++;
-        else if (groupScore >= 20) scoreBuckets['20 - 40']++;
-        else scoreBuckets['0 - 20']++;
+        const groupName = g.name || 'Grup Tanpa Nama';
+
+        if (groupScore >= 80) {
+          scoreBuckets['80 - 100'].value++;
+          scoreBuckets['80 - 100'].groups.push(groupName);
+        } else if (groupScore >= 60) {
+          scoreBuckets['60 - 80'].value++;
+          scoreBuckets['60 - 80'].groups.push(groupName);
+        } else if (groupScore >= 40) {
+          scoreBuckets['40 - 60'].value++;
+          scoreBuckets['40 - 60'].groups.push(groupName);
+        } else if (groupScore >= 20) {
+          scoreBuckets['20 - 40'].value++;
+          scoreBuckets['20 - 40'].groups.push(groupName);
+        } else {
+          scoreBuckets['0 - 20'].value++;
+          scoreBuckets['0 - 20'].groups.push(groupName);
+        }
       });
     });
 
-    const sebaranNilaiPieData = Object.entries(scoreBuckets).map(([name, value]) => ({ name, value }));
-    const totalNilai = Object.values(scoreBuckets).reduce((sum, v) => sum + v, 0);
+    const sebaranNilaiPieData = Object.entries(scoreBuckets).map(([name, data]) => ({ 
+      name, 
+      value: data.value,
+      groups: data.groups 
+    }));
+    
+    const totalNilai = Object.values(scoreBuckets).reduce((sum, v) => sum + v.value, 0);
 
     // Nilai per GRUP (bukan per user/juri lagi). Basis grup sama dengan
     // chart Status Pengisian Grup & Sebaran Nilai: grup dihitung hanya jika
@@ -309,21 +327,46 @@ export default function AdminDashboard() {
 
       {/* CARD STATISTIK */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6 mb-6">
-        {statConfig.map(({ key, label, icon }) => (
-          <Card key={key} className="p-4 md:p-6">
-            <div className="flex flex-col items-center text-center gap-2 md:flex-row md:items-center md:text-left md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center text-xl md:text-2xl bg-[#C8933E]/10 text-[#C8933E]">
-                {icon}
+        {statConfig.map(({ key, label, icon }) => {
+          // Cek apakah ini stat yang dinamis (terpengaruh filter)
+          const isDynamic = key === 'assessmentCount';
+          const value = isDynamic ? processedData?.totalAssessmentFiltered : rawData?.[key];
+
+          return (
+            <Card 
+              key={key} 
+              // Berikan styling khusus untuk card yang dinamis
+              className={`p-4 md:p-6 relative overflow-hidden transition-all ${
+                isDynamic 
+                  ? 'ring-1 ring-[#C8933E] bg-gradient-to-br from-white to-[#C8933E]/5 shadow-md' 
+                  : 'border border-slate-100'
+              }`}
+            >
+              {/* Badge penanda untuk card dinamis */}
+              {isDynamic && (
+                <div className="absolute top-0 right-0 bg-[#C8933E] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-bl-lg z-10">
+                  Sesi Aktif
+                </div>
+              )}
+
+              <div className="flex flex-col items-center text-center gap-2 md:flex-row md:items-center md:text-left md:gap-4 relative z-0">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center text-xl md:text-2xl bg-[#C8933E]/10 text-[#C8933E] shrink-0">
+                  {icon}
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm text-slate-500 leading-tight">
+                    {/* Hapus teks (Akan Dinilai) yang kepanjangan jika ada, atau biarkan */}
+                    {isDynamic ? 'Total Penilaian' : label} 
+                  </p>
+                  <p className="font-serif text-xl md:text-2xl font-semibold text-[#17203A] mt-0.5">
+                    {/* Tampilkan Loading state kecil jika processedData belum siap */}
+                    {value !== undefined ? value : '-'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs md:text-sm text-slate-500">{label}</p>
-                <p className="font-serif text-xl md:text-2xl font-semibold text-[#17203A]">
-                  {key === 'assessmentCount' ? processedData?.totalAssessmentFiltered : rawData?.[key]}
-                </p>
-              </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {/* PANEL STATUS PENGISIAN: PER USER, PER GRUP, & SEBARAN NILAI */}

@@ -11,7 +11,7 @@ const navItems = [
   { path: '/admin/sessions', label: 'Session', icon: LayoutGrid },
   { path: '/admin/groups', label: 'Grup', icon: Layers },
   { path: '/admin/teams', label: 'Tim', icon: UsersRound },
-  { path: '/admin/users', label: 'Pengguna', icon: Users },
+  { path: '/admin/users', label: 'Juri', icon: Users },
   { path: '/admin/assessments', label: 'Penilaian', icon: FileCheck2 },
   { path: '/admin/recap', label: 'Rekapitulasi', icon: Calculator },
 ];

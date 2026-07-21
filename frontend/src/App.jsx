@@ -8,7 +8,7 @@ function App() {
     <AuthProvider>
       <AppRoutes />
       <ToastContainer />
-      <AIAssistantWidget />
+      {/* <AIAssistantWidget /> */}
     </AuthProvider>
   )
 }

@@ -6,20 +6,9 @@ import assessmentService from '../../services/assessmentService';
 import groupService from '../../services/groupService';
 import sessionService from '../../services/sessionService';
 import { Search, ArrowUpDown, Pencil, Eye } from 'lucide-react';
+import ScoreBadge from '../../components/ScoreBadge';
 
-function ScoreBadge({ percentage }) {
-  const tone =
-    percentage >= 75
-      ? 'bg-[#0F9D6D]/10 text-[#0F9D6D]'
-      : percentage >= 50
-      ? 'bg-[#C8933E]/10 text-[#a97a30]'
-      : 'bg-[#C1443A]/10 text-[#C1443A]';
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>
-      {percentage}
-    </span>
-  );
-}
+
 
 export default function AssessmentHistory() {
   const [assessments, setAssessments] = useState([]);
