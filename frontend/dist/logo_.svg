@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background (Navy Blue dengan sudut melengkung khas ikon aplikasi) -->
+  <rect width="512" height="512" rx="120" fill="#17203A"/>
+  
+  <!-- Lingkaran Indikator (Gauge Arc) - Warna Emas -->
+  <!-- Melengkung dari kiri bawah ke kanan bawah -->
+  <path 
+    d="M 142 369 A 160 160 0 1 1 370 369" 
+    fill="none" 
+    stroke="#C8933E" 
+    stroke-width="56" 
+    stroke-linecap="round"
+  />
+  
+  <!-- Jarum Penunjuk (Needle) - Warna Putih menunjuk ke nilai tinggi (kanan atas) -->
+  <path 
+    d="M 256 256 L 340 172" 
+    fill="none" 
+    stroke="#FFFFFF" 
+    stroke-width="48" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+  />
+  
+  <!-- Titik Poros Tengah Jarum -->
+  <circle cx="256" cy="256" r="36" fill="#FFFFFF"/>
+</svg>

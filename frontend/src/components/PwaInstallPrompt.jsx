@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { getDeferredPrompt, clearDeferredPrompt, onInstallPromptAvailable } from '../pwaInstall';
 
 export default function PwaInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  // Ambil langsung kalau event sudah tertangkap sebelum komponen ini mount
+  const [deferredPrompt, setDeferredPrompt] = useState(() => getDeferredPrompt());
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
@@ -16,22 +18,19 @@ export default function PwaInstallPrompt() {
     };
     checkStandalone();
 
-    // Tangkap event beforeinstallprompt
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e); // simpan event untuk dipakai nanti
-    };
+    // Subscribe ke event global — kalau event sudah ada, callback langsung
+    // dipanggil sekali; kalau belum, akan dipanggil saat event benar-benar fire
+    const unsubscribe = onInstallPromptAvailable((event) => {
+      setDeferredPrompt(event);
+    });
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
+    return unsubscribe;
   }, []);
 
   const handleInstallClick = () => {
     if (deferredPrompt) {
-      // Tampilkan SweetAlert dengan tombol install
+      // Tampilkan SweetAlert konfirmasi dulu (opsional, bisa dihapus
+      // kalau mau langsung munculkan popup native browser tanpa dialog ini)
       Swal.fire({
         title: 'Instal Aplikasi',
         text: 'Pasang aplikasi ini di perangkat Anda agar lebih mudah diakses.',
@@ -44,10 +43,11 @@ export default function PwaInstallPrompt() {
         reverseButtons: true,
       }).then(async (result) => {
         if (result.isConfirmed) {
-          // User klik Install → langsung muncul prompt bawaan browser
+          // Munculkan prompt install NATIVE bawaan browser
           deferredPrompt.prompt();
           const { outcome } = await deferredPrompt.userChoice;
           if (outcome === 'accepted') {
+            clearDeferredPrompt();
             setDeferredPrompt(null);
             Swal.fire('Berhasil!', 'Aplikasi sedang diinstal.', 'success');
           } else {
@@ -56,7 +56,10 @@ export default function PwaInstallPrompt() {
         }
       });
     } else {
-      // Fallback jika browser tidak mendukung (misal Safari atau sudah ditolak)
+      // Fallback ini SEHARUSNYA jarang muncul sekarang.
+      // Kalau masih sering muncul di Chrome/Edge Android, artinya:
+      // - manifest/service worker belum lolos syarat installability, atau
+      // - browser memang tidak mendukung (Safari/iOS/Firefox desktop)
       Swal.fire({
         title: 'Cara Install Manual',
         html: `

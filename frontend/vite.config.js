@@ -9,34 +9,54 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto', // Memastikan script SW disuntikkan ke index.html
-      includeAssets: ['logo.svg', 'pwa-192x192.png', 'pwa-512x512.png'], // Masukkan file PNG ke cache
+      injectRegister: 'auto', // Menyuntikkan script registrasi SW ke index.html
+
+      // Aktifkan PWA saat development (npm run dev), bukan cuma saat build
+      // Tanpa ini, beforeinstallprompt TIDAK PERNAH muncul di dev server
+      devOptions: {
+        enabled: true,
+        type: 'module'
+      },
+
+      // File-file ini WAJIB ada secara fisik di folder /public
+      includeAssets: ['logo.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+
       manifest: {
-        name: 'Aplikasi Penilaian', 
+        name: 'Aplikasi Penilaian',
         short_name: 'PenilaianApp',
         description: 'Aplikasi penilaian',
         theme_color: '#17203A',
         background_color: '#F3F4F7',
         display: 'standalone',
-        start_url: '/', // PENTING: Syarat wajib agar tombol install muncul
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable' // Agar icon bisa menyesuaikan bentuk (bulat/kotak) di Android
+            purpose: 'any'
+          },
+          {
+            // Entri terpisah khusus untuk maskable icon
+            // (dipisah dari 'any' agar Chrome tidak salah render bentuk icon)
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
+      },
+
+      workbox: {
+        // Pastikan semua asset penting ikut di-precache oleh service worker
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}']
       }
     })
   ],
