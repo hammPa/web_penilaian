@@ -1,32 +1,26 @@
-const cloudinary = require('cloudinary').v2;
+const ftp = require('basic-ftp');
 const sharp = require('sharp');
+const { Readable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
 const { success } = require('../utils/responseFormatter');
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Kredensial & path diambil dari .env -- JANGAN hardcode.
+// Wajib set di .env:
+//   FTP_HOST=ftp.domainkamu.com     (atau IP FTP dari hPanel Hostinger)
+//   FTP_USER=xxxxx
+//   FTP_PASSWORD=xxxxx
+//   FTP_UPLOAD_DIR=/public_html/uploads   (path folder tujuan di Hostinger)
+//   PUBLIC_BASE_URL=https://domainkamu.com/uploads  (URL publik utk folder itu)
+const FTP_CONFIG = {
+  host: process.env.FTP_HOST,
+  user: process.env.FTP_USER,
+  password: process.env.FTP_PASSWORD,
+  secure: false, // Hostinger shared hosting umumnya FTP biasa (port 21).
+                 // Kalau hPanel kasih opsi FTPS, ganti ke true.
+};
 
-// Helper: upload satu buffer ke Cloudinary lewat stream (tidak nyentuh disk sama sekali)
-function uploadBufferToCloudinary(buffer, publicId) {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'assessment-photos', // biar rapi, semua foto assessment masuk 1 folder di Cloudinary
-        public_id: publicId,
-        resource_type: 'image',
-        overwrite: false,
-      },
-      (err, result) => {
-        if (err) return reject(err);
-        resolve(result);
-      }
-    );
-    uploadStream.end(buffer);
-  });
-}
+const FTP_UPLOAD_DIR = process.env.FTP_UPLOAD_DIR || '/public_html/uploads';
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
 
 class UploadController {
   async uploadPhotos(req, res, next) {
@@ -36,26 +30,32 @@ class UploadController {
       }
 
       const uploadedUrls = [];
+      const client = new ftp.Client();
+      client.ftp.verbose = false;
 
-      // Loop semua file yang dikirim
-      for (const file of req.files) {
-        // Kompresi dulu di memory pakai Sharp (SAMA seperti sebelumnya) --
-        // supaya file yang dikirim ke Cloudinary sudah kecil, hemat kuota
-        // storage & bandwidth free tier.
-        const compressedBuffer = await sharp(file.buffer)
-          .resize({ width: 1280, withoutEnlargement: true }) // Max lebar 1280px
-          .jpeg({ quality: 70 }) // Kualitas 70%
-          .toBuffer();
+      try {
+        await client.access(FTP_CONFIG);
+        await client.ensureDir(FTP_UPLOAD_DIR); // pindah + bikin folder kalau belum ada
 
-        const publicId = `doc-${uuidv4()}`;
-        const result = await uploadBufferToCloudinary(compressedBuffer, publicId);
+        for (const file of req.files) {
+          // Kompresi dulu di memory (SAMA seperti sebelumnya), supaya file
+          // yang dikirim ke Hostinger lebih kecil -- hemat kuota disk shared hosting.
+          const compressedBuffer = await sharp(file.buffer)
+            .resize({ width: 1280, withoutEnlargement: true })
+            .jpeg({ quality: 70 })
+            .toBuffer();
 
-        // secure_url = URL https permanen dari Cloudinary, inilah yang
-        // disimpan ke field `photos` (tetap array of string URL, format
-        // yang sama seperti sebelumnya -- Repository/Service tidak berubah)
-        uploadedUrls.push(result.secure_url);
+          const filename = `doc-${uuidv4()}.jpg`;
+          await client.uploadFrom(Readable.from(compressedBuffer), filename);
+
+          uploadedUrls.push(`${PUBLIC_BASE_URL}/${filename}`);
+        }
+      } finally {
+        client.close();
       }
 
+      // Tetap array of URL string, sama seperti versi lokal/Cloudinary --
+      // Repository/Service tidak perlu diubah.
       success(res, uploadedUrls, 'Foto berhasil diunggah', 201);
     } catch (err) {
       next(err);
