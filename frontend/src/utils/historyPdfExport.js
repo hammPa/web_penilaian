@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { resolvePhotoUrl } from './resolvePhotoUrl';
 
 async function urlToBase64(url) {
   const response = await fetch(url);
@@ -91,7 +92,9 @@ async function renderAssessmentPdf({
     let x = margin;
     for (const photoUrl of photos) {
       try {
-        const base64 = await urlToBase64(`${baseUrl}${photoUrl}`);
+        // resolvePhotoUrl: foto baru (Cloudinary/Hostinger) sudah full URL,
+        // dipakai apa adanya. Foto lama (path lokal) tetap digabung baseUrl.
+        const base64 = await urlToBase64(resolvePhotoUrl(photoUrl, baseUrl));
         if (x + imgSize > pageWidth - margin) {
           x = margin;
           y += imgSize + 5;

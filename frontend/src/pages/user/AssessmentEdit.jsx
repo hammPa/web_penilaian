@@ -10,6 +10,7 @@ import variableService from '../../services/variableService';
 import assessmentService from '../../services/assessmentService';
 import api from '../../api/axiosInstance';
 import { Camera, X } from 'lucide-react';
+import { resolvePhotoUrl } from '../../utils/resolvePhotoUrl';
 
 const LEVELS = [0, 1, 2, 3, 4, 5];
 
@@ -267,7 +268,7 @@ export default function AssessmentEdit() {
           <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-3">
             {existingPhotos.map((url, index) => (
               <div key={`existing-${index}`} className="relative aspect-square sm:w-24 sm:h-24 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                <img src={`${baseUrl}${url}`} alt="Foto lama" className="w-full h-full object-cover" />
+                <img src={resolvePhotoUrl(url, baseUrl)} alt="Foto lama" className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => removeExistingPhoto(index)}

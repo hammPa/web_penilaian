@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { getDeferredPrompt, clearDeferredPrompt, onInstallPromptAvailable } from '../pwaInstall';
 
 export default function PwaInstallPrompt() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
   // Ambil langsung kalau event sudah tertangkap sebelum komponen ini mount
   const [deferredPrompt, setDeferredPrompt] = useState(() => getDeferredPrompt());
   const [isStandalone, setIsStandalone] = useState(false);
+  // Hanya relevan di halaman SELAIN login -- kontrol tab kecil vs tombol penuh
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     // Cek apakah aplikasi sudah terinstal (mode standalone)
@@ -26,6 +32,12 @@ export default function PwaInstallPrompt() {
 
     return unsubscribe;
   }, []);
+
+  // Setiap pindah halaman, balikin lagi ke kondisi "collapsed" (nyembul dikit
+  // di pinggir) supaya tidak nyangkut kebuka terus pas navigasi ke page lain.
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [location.pathname]);
 
   const handleInstallClick = () => {
     if (deferredPrompt) {
@@ -78,9 +90,27 @@ export default function PwaInstallPrompt() {
     }
   };
 
-  // Jika sudah terinstal, sembunyikan tombol
+  // Jika sudah terinstal, sembunyikan tombol sepenuhnya
   if (isStandalone) return null;
 
+  // Di halaman SELAIN login dan belum di-klik: tampilkan tab kecil nyembul
+  // dari pinggir kanan layar. Klik sekali -> baru meleber jadi tombol penuh.
+  const showCollapsedTab = !isLoginPage && !isExpanded;
+
+  if (showCollapsedTab) {
+    return (
+      <button
+        onClick={() => setIsExpanded(true)}
+        title="Install Aplikasi"
+        className="fixed bottom-6 right-0 z-50 bg-[#C8933E] text-white pl-3 pr-4 py-3 rounded-l-full shadow-lg shadow-black/20 flex items-center border-2 border-r-0 border-white translate-x-3 hover:translate-x-0 transition-transform duration-300 cursor-pointer"
+      >
+        <Download size={18} strokeWidth={2.5} />
+      </button>
+    );
+  }
+
+  // Tombol penuh: selalu tampil apa adanya di halaman login,
+  // atau di halaman lain setelah tab kecil di atas diklik (isExpanded = true)
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-bounce">
       <button

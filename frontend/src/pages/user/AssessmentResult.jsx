@@ -9,6 +9,7 @@ import criteriaService from '../../services/criteriaService';
 import tableService from '../../services/tableService';
 import { Image as ImageIcon, ArrowLeft, Download } from 'lucide-react';
 import { userHistoryPdfExport } from '../../utils/historyPdfExport';
+import { resolvePhotoUrl } from '../../utils/resolvePhotoUrl';
 
 export default function AssessmentResult() {
   const { id } = useParams();
@@ -262,13 +263,13 @@ export default function AssessmentResult() {
             {assessment.photos.map((photoUrl, idx) => (
               <a 
                 key={idx} 
-                href={`${baseUrl}${photoUrl}`}
+                href={resolvePhotoUrl(photoUrl, baseUrl)}
                 target="_blank" 
                 rel="noreferrer"
                 className="relative aspect-square sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-slate-200 shadow-sm group hover:ring-2 hover:ring-[#C8933E] transition-all"
               >
                 <img 
-                  src={`${baseUrl}${photoUrl}`}
+                  src={resolvePhotoUrl(photoUrl, baseUrl)}
                   alt={`Dokumentasi ${idx + 1}`} 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                 />

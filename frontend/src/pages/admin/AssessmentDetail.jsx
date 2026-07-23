@@ -3,6 +3,7 @@ import { useToast } from '../../hooks/useToast';
 import { Download, Calendar, Users, Shield, User, Image as ImageIcon, MessageSquare, CheckCircle } from 'lucide-react';
 import { adminAssessmentPdfExport } from '../../utils/historyPdfExport';
 import EmptyState from '../../components/EmptyState';
+import { resolvePhotoUrl } from '../../utils/resolvePhotoUrl';
 
 export default function AssessmentDetail({ item, tableMap, criteriaMap, variableMap }) {
   const [downloading, setDownloading] = useState(false);
@@ -139,13 +140,13 @@ export default function AssessmentDetail({ item, tableMap, criteriaMap, variable
             {item.photos.map((photoUrl, idx) => (
               <a
                 key={idx}
-                href={`${baseUrl}${photoUrl}`}
+                href={resolvePhotoUrl(photoUrl, baseUrl)}
                 target="_blank"
                 rel="noreferrer"
                 className="group relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border border-slate-200 shadow-sm hover:ring-2 hover:ring-[#C8933E] hover:shadow-md transition-all shrink-0"
               >
                 <img
-                  src={`${baseUrl}${photoUrl}`}
+                  src={resolvePhotoUrl(photoUrl, baseUrl)}
                   alt={`Dokumentasi ${idx + 1}`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
