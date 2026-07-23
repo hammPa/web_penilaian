@@ -1,10 +1,10 @@
 module.exports = {
   PORT: process.env.PORT || 5000,
   JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-  DATA_DIR: 'data',
+  DATA_DIR: process.env.DATA_DIR || 'data',
 
   // mode = json | sqlite | mariadb
-  DB_MODE: process.env.DB_MODE || 'json',
+  DB_MODE: process.env.DB_MODE || 'sqlite',
 
   // hanya dipakai kalau DB_MODE=sqlite, disimpan di dalam folder DATA_DIR
   DB_FILE: process.env.DB_FILE || 'web_penilaian.sqlite',
