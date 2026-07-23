@@ -1,4 +1,10 @@
 node_modules
-*.sqlite-shm
-*.sqlite-wal
+npm-debug.log
 .env
+.git
+.github
+.gitignore
+public/uploads/*
+!public/uploads/.gitkeep
+data/*.db
+*.sqlite*
