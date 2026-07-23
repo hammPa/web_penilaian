@@ -30,4 +30,4 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/web-penilaian-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/web-penilaian-backend:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/web-penilaian-backend:${{ github.run_number }}
