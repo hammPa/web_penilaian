@@ -144,7 +144,12 @@ export default function AssessmentForm() {
     return <EmptyState message="Data tabel/kriteria/variabel belum tersedia untuk sesi ini" />;
   }
 
-  const groupedTables = tables.map(t => {
+  // Urutkan tabel berdasarkan abjad (nama) sebelum dikelompokkan
+  const sortedTables = [...tables].sort((a, b) =>
+    a.name.localeCompare(b.name, 'id', { sensitivity: 'base' })
+  );
+
+  const groupedTables = sortedTables.map(t => {
     const tableCriteria = criteria.filter(c => c.tableId === t.id);
     return {
       table: t,
@@ -222,7 +227,7 @@ export default function AssessmentForm() {
                               <div key={variable.id} className="py-4">
                                 <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-2">
                                   <span className="text-sm font-semibold text-slate-700 leading-tight">{variable.name}</span>
-                                  <span className="text-[11px] font-medium text-slate-400 bg-slate-50 sm:bg-transparent px-1.5 py-0.5 sm:p-0 rounded self-start sm:self-auto">Koefisien {variable.weight}</span>
+                                  {/* <span className="text-[11px] font-medium text-slate-400 bg-slate-50 sm:bg-transparent px-1.5 py-0.5 sm:p-0 rounded self-start sm:self-auto">Koefisien {variable.weight}</span> */}
                                 </div>
                                 {variable.description && (
                                   <p className="text-xs text-slate-500 mb-3 leading-relaxed">{variable.description}</p>

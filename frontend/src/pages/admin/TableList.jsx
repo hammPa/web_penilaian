@@ -61,6 +61,11 @@ export default function TableList() {
     return acc;
   }, {});
 
+  // Urutkan tabel berdasarkan abjad (nama)
+  const sortedTables = [...tables].sort((a, b) =>
+    a.name.localeCompare(b.name, 'id', { sensitivity: 'base' })
+  );
+
   const openCreate = () => {
     setEditItem(null);
     setForm({ name: '', description: '' });
@@ -186,7 +191,7 @@ export default function TableList() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <Table
             headers={['Nama Tabel', 'Deskripsi', 'Jumlah Kriteria', 'Aksi']}
-            data={tables}
+            data={sortedTables}
             renderRow={(item) => (
               <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                 <td className="px-6 py-4">
@@ -222,7 +227,7 @@ export default function TableList() {
         </div>
       ) : (
         <div className="space-y-6">
-          {tables.map((table) => (
+          {sortedTables.map((table) => (
             <GridModeTable
               key={table.id}
               table={table}
