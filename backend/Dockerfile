@@ -1,40 +1,25 @@
-# STAGE 1: Build & Install Dependencies
-FROM node:20-alpine AS builder
-
-# Install build tools untuk native C/C++ modules (better-sqlite3, sharp)
-RUN apk add --no-cache python3 make g++ gcc
-
-WORKDIR /app
-
-# Copy manifest dependency
-COPY package*.json ./
-
-# Install semua dependency (termasuk native bindings)
-RUN npm ci
-
-# STAGE 2: Production Image
-FROM node:20-alpine AS runner
+FROM node:20-alpine
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=7860
 
-# Copy node_modules yang sudah ter-compile dari Stage 1
-COPY --from=builder /app/node_modules ./node_modules
+# Copy manifest dependency
 COPY package*.json ./
 
-# Copy source code aplikasi
+# Install dependencies khusus production
+RUN npm ci --only=production
+
+# Copy source code & script pendukung
 COPY src ./src
 COPY schema_final.sql ./
-COPY migrate-to-sqlite.js ./
-COPY migrate_hash_pass.js ./
 
-# Buat folder untuk Persistent Storage (Uploads & Database SQLite)
-RUN mkdir -p public/uploads data
+# Buat folder untuk uploads (Persistent Storage jika ada file upload)
+RUN mkdir -p public/uploads && chown -R node:node /app
 
-# Expose port ( Railway default/custom port )
+USER node
+
 EXPOSE 7860
 
-# Jalankan server
 CMD ["node", "src/server.js"]
