@@ -72,11 +72,16 @@ export default function Login() {
 
       <div className="relative bg-white rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-black/5 w-full max-w-md p-8 sm:p-10">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 grid place-items-center h-14 w-14 rounded-2xl bg-[#C8933E]/10 ring-1 ring-[#C8933E]/20">
+          {/* <div className="mx-auto mb-4 grid place-items-center h-14 w-14 rounded-2xl bg-[#C8933E]/10 ring-1 ring-[#C8933E]/20">
             <Gauge className="h-6 w-6 text-[#C8933E]" strokeWidth={2} />
-          </div>
+          </div> */}
+          <img 
+            src="/favicon.svg"
+            alt="Logo Sistem Penilaian" 
+            className="mx-auto mb-4 h-14 w-14" 
+          />
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C8933E]">Selamat Datang</p>
-          <h1 className="font-serif text-2xl font-semibold text-[#17203A] mt-1.5">Sistem Penilaian</h1>
+          <h1 className="font-serif text-2xl font-semibold text-[#17203A] mt-1.5">Sistem Penilaian 5P</h1>
           <p className="text-slate-500 text-sm mt-2">Silakan login untuk melanjutkan</p>
         </div>
 
