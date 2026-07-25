@@ -1,5 +1,4 @@
 const cloudinary = require('cloudinary').v2;
-const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
 const { success } = require('../utils/responseFormatter');
 
@@ -31,6 +30,8 @@ function uploadBufferToCloudinary(buffer, publicId) {
 class UploadController {
   async uploadPhotos(req, res, next) {
     try {
+      const sharp = require('sharp');
+
       if (!req.files || req.files.length === 0) {
         return success(res, [], 'Tidak ada file diupload');
       }

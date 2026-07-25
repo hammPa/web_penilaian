@@ -1,4 +1,3 @@
-const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
@@ -13,6 +12,8 @@ if (!fs.existsSync(uploadDir)) {
 class UploadController {
   async uploadPhotos(req, res, next) {
     try {
+      const sharp = require('sharp');
+
       if (!req.files || req.files.length === 0) {
         return success(res, [], 'Tidak ada file diupload');
       }

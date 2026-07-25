@@ -1,5 +1,4 @@
 const ftp = require('basic-ftp');
-const sharp = require('sharp');
 const { Readable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
 const { success } = require('../utils/responseFormatter');
@@ -25,6 +24,8 @@ const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
 class UploadController {
   async uploadPhotos(req, res, next) {
     try {
+      const sharp = require('sharp');
+
       if (!req.files || req.files.length === 0) {
         return success(res, [], 'Tidak ada file diupload');
       }
