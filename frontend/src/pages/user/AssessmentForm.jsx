@@ -305,7 +305,7 @@ export default function AssessmentForm() {
               />
             </label>
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-400 mt-3 sm:mt-4 leading-normal">Upload foto dokumentasi tanpa batasan. Foto akan dikompresi otomatis untuk menghemat ruang.</p>
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-3 sm:mt-4 leading-normal">Upload foto dokumentasi maksimal 20 gambar. Foto akan dikompresi otomatis untuk menghemat ruang.</p>
         </div>
 
         {/* Widget Rekomendasi (Opsional) */}
