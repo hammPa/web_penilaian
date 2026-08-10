@@ -13,6 +13,57 @@ import { Camera, X } from 'lucide-react';
 
 const LEVELS = [0, 1, 2, 3, 4, 5];
 
+// Kompres & resize gambar di sisi client sebelum diupload ke server.
+// - maxDimension: batas lebar/tinggi terpanjang (px)
+// - quality: kualitas JPEG (0-1)
+// Mengembalikan File baru (JPEG) yang lebih kecil dari aslinya.
+async function compressImage(file, { maxDimension = 1600, quality = 0.75 } = {}) {
+  if (!file.type.startsWith('image/')) return file;
+
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = dataUrl;
+  });
+
+  let { width, height } = img;
+  if (width > maxDimension || height > maxDimension) {
+    if (width >= height) {
+      height = Math.round((height * maxDimension) / width);
+      width = maxDimension;
+    } else {
+      width = Math.round((width * maxDimension) / height);
+      height = maxDimension;
+    }
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, width, height);
+
+  const blob = await new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
+  });
+
+  // Kalau kompresi gagal atau hasilnya malah lebih besar, pakai file asli
+  if (!blob || blob.size >= file.size) {
+    return file;
+  }
+
+  const newName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+  return new File([blob], newName, { type: 'image/jpeg', lastModified: Date.now() });
+}
+
 export default function AssessmentForm() {
   const [tables, setTables] = useState([]);
   const [criteria, setCriteria] = useState([]);
@@ -24,6 +75,8 @@ export default function AssessmentForm() {
   const [photos, setPhotos] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [recommendation, setRecommendation] = useState('');
+
+  const [compressing, setCompressing] = useState(false);
 
   const [searchParams] = useSearchParams();
   const groupId = searchParams.get('groupId');
@@ -69,12 +122,27 @@ export default function AssessmentForm() {
     setSelections(prev => ({ ...prev, [variableId]: level }));
   };
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = async (e) => {
     const files = Array.from(e.target.files);
-    setPhotos((prev) => [...prev, ...files]);
-    
-    const newPreviews = files.map(file => URL.createObjectURL(file));
-    setPreviews((prev) => [...prev, ...newPreviews]);
+    if (files.length === 0) return;
+
+    setCompressing(true);
+    try {
+      const compressedFiles = await Promise.all(
+        files.map((file) => compressImage(file))
+      );
+
+      setPhotos((prev) => [...prev, ...compressedFiles]);
+
+      const newPreviews = compressedFiles.map((file) => URL.createObjectURL(file));
+      setPreviews((prev) => [...prev, ...newPreviews]);
+    } catch (err) {
+      showToast('Gagal memproses foto, coba lagi', 'error');
+    } finally {
+      setCompressing(false);
+      // reset value input supaya bisa pilih file yang sama lagi kalau perlu
+      e.target.value = '';
+    }
   };
 
   const removePhoto = (index) => {
